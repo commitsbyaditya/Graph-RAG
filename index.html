@@ -1130,7 +1130,8 @@
     // ═══════════════════════════════════════════════════════════
     //  INIT
     // ═══════════════════════════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await tryLoadBackendKey(); // Fetch from .env over local server
       updateHeaderStats();
       buildFilterGrid();
       buildSamples();
@@ -1141,6 +1142,21 @@
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuery(); }
       });
     });
+
+    async function tryLoadBackendKey() {
+      // Try to get key from our local Python server
+      try {
+        const resp = await fetch('/api/config');
+        if (resp.ok) {
+          const cfg = await resp.json();
+          if (cfg.GROQ_API_KEY) {
+            API_KEY = cfg.GROQ_API_KEY;
+          }
+        }
+      } catch (e) {
+        // Fall back to localStorage if the server isn't running or endpoint is missing
+      }
+    }
 
     function checkApiKey() {
       document.getElementById('api-warning').classList.toggle('show', !API_KEY);
