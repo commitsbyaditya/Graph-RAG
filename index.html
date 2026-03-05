@@ -2268,6 +2268,62 @@
         console.error(err);
       }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  KEYBOARD SHORTCUTS
+    // ═══════════════════════════════════════════════════════════
+    document.addEventListener('keydown', e => {
+      // Ctrl+K = Focus node search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('node-search')?.focus();
+      }
+      // Ctrl+/ = Show shortcuts help
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        openShortcutsModal();
+      }
+      // Escape = Close modal / clear search
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('modal');
+        if (modal.classList.contains('open')) {
+          closeModal();
+        } else {
+          const search = document.getElementById('node-search');
+          if (search) { search.value = ''; liveSearchNodes(''); }
+        }
+      }
+      // Ctrl+Enter = Send query
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleQuery();
+      }
+    });
+
+    function openShortcutsModal() {
+      document.getElementById('modal-title').textContent = '⌨ Keyboard Shortcuts';
+      document.getElementById('modal-body').innerHTML = `
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text1);line-height:2.4">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span>Focus Node Search</span><span style="color:var(--cyan);background:var(--bg3);padding:2px 8px;border-radius:4px">Ctrl + K</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span>Send Query</span><span style="color:var(--cyan);background:var(--bg3);padding:2px 8px;border-radius:4px">Ctrl + Enter</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span>Show Shortcuts</span><span style="color:var(--cyan);background:var(--bg3);padding:2px 8px;border-radius:4px">Ctrl + /</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span>Close Modal / Clear Search</span><span style="color:var(--cyan);background:var(--bg3);padding:2px 8px;border-radius:4px">Escape</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+          <span>Submit Query (in input)</span><span style="color:var(--cyan);background:var(--bg3);padding:2px 8px;border-radius:4px">Enter</span>
+        </div>
+      </div>`;
+      document.getElementById('modal-footer').innerHTML = `
+      <button class="btn btn-primary" onclick="closeModal()">GOT IT</button>`;
+      document.getElementById('modal').classList.add('open');
+    }
   </script>
 </body>
 
