@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GraphRAG System · Lab 11</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg0: #02080a;
+  --bg1: #030d10;
+  --bg2: #071418;
+  --bg3: #0a1c22;
+  --border: #0d2e38;
+  --border2: #123545;
+  --text0: #e8f5f8;
+  --text1: #8bb8c4;
+  --text2: #3a6070;
+  --text3: #1e3d4a;
+  --cyan:  #00e5ff;
+  --cyan2: #00b4cc;
+  --cyan3: #007b8a;
+  --green: #00ff9d;
+  --green2: #00cc7a;
+  --violet:#9c6fff;
+  --orange:#ff6b35;
+  --yellow:#ffd166;
+  --red:   #ff4757;
+  --pink:  #ff6b9d;
+  --r:6px;
+  --glow-cyan: 0 0 20px #00e5ff33, 0 0 40px #00e5ff11;
+  --glow-green: 0 0 20px #00ff9d33, 0 0 40px #00ff9d11;
+}
+
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg0); color:var(--text0); font-family:'Space Grotesk',sans-serif; }
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+#app { display:grid; grid-template-rows:52px 1fr; grid-template-columns:280px 1fr 360px; height:100vh; }
+#header   { grid-column:1/-1; grid-row:1; display:flex; align-items:center; justify-content:space-between; padding:0 20px; background:var(--bg1); border-bottom:1px solid var(--border); z-index:10; }
+#sidebar  { grid-column:1;   grid-row:2; background:var(--bg1); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+#canvas   { grid-column:2;   grid-row:2; position:relative; overflow:hidden; background:var(--bg0); }
+#panel    { grid-column:3;   grid-row:2; background:var(--bg1); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.logo { display:flex; align-items:center; gap:12px; }
+.logo-icon { width:32px; height:32px; background:linear-gradient(135deg,var(--cyan),var(--violet)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:var(--glow-cyan); }
+.logo-text { font-size:17px; font-weight:700; letter-spacing:1.5px; color:var(--text0); font-family:'JetBrains Mono',monospace; }
+.logo-text span { color:var(--cyan); }
+.logo-badge { font-size:9px; color:var(--text3); letter-spacing:3px; margin-top:1px; }
+.header-stats { display:flex; gap:24px; }
+.hstat { text-align:center; }
+.hstat-val { font-size:16px; font-weight:700; color:var(--cyan); font-family:'JetBrains Mono',monospace; }
+.hstat-lbl { font-size:9px; color:var(--text3); letter-spacing:2px; margin-top:2px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.btn { padding:6px 14px; border-radius:var(--r); border:1px solid var(--border2); background:var(--bg3); color:var(--text1); font-size:11px; cursor:pointer; font-family:'JetBrains Mono',monospace; letter-spacing:1px; transition:all .2s; }
+.btn:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 10px #00e5ff22; }
+.btn-primary { background:linear-gradient(90deg,var(--cyan),var(--violet)); border:none; color:#000; font-weight:700; }
+.btn-primary:hover { opacity:.9; color:#000; box-shadow:var(--glow-cyan); }
+#status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ─── SIDEBAR ────────────────────────────────────────────── */
+.section { border-bottom:1px solid var(--border); }
+.section-header { padding:12px 14px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+.section-title { font-size:9px; letter-spacing:3px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+.section-body { padding:10px 14px 14px; }
+
+/* Node filters */
+.filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.filter-chip { padding:6px 8px; border-radius:4px; border:1px solid var(--border); background:var(--bg2); color:var(--text2); font-size:10px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .2s; font-family:'JetBrains Mono',monospace; }
+.filter-chip.active { color:#000; font-weight:600; }
+.filter-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* Depth control */
+.depth-row { display:flex; align-items:center; gap:10px; }
+.depth-label { font-size:10px; color:var(--text2); font-family:'JetBrains Mono',monospace; flex:1; }
+.depth-val { font-size:14px; font-weight:700; color:var(--cyan); font-family:'JetBrains Mono',monospace; width:24px; text-align:center; }
+.depth-btn { width:24px; height:24px; border-radius:4px; border:1px solid var(--border2); background:var(--bg3); color:var(--text1); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.depth-btn:hover { border-color:var(--cyan); color:var(--cyan); }
+
+/* Cypher display */
+#cypher-box { background:var(--bg0); border:1px solid var(--border); border-radius:var(--r); padding:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text2); line-height:1.8; min-height:60px; transition:all .4s; white-space:pre-wrap; word-break:break-all; }
+.cypher-kw { color:var(--violet); }
+.cypher-label { color:var(--cyan); }
+.cypher-rel { color:var(--orange); }
+.cypher-str { color:var(--green); }
+.cypher-num { color:var(--yellow); }
+
+/* Node inspector */
+#inspector { flex:1; overflow-y:auto; padding:14px; }
+.inspect-card { background:var(--bg0); border:1px solid var(--border); border-radius:var(--r); padding:12px; margin-bottom:10px; transition:all .3s; }
+.inspect-card:hover { border-color:var(--border2); }
+.inspect-name { font-size:13px; font-weight:600; margin-bottom:4px; }
+.inspect-type { font-size:9px; letter-spacing:2px; margin-bottom:8px; font-family:'JetBrains Mono',monospace; }
+.inspect-desc { font-size:11px; color:var(--text1); line-height:1.6; margin-bottom:8px; }
+.inspect-rels { font-size:9px; color:var(--text2); font-family:'JetBrains Mono',monospace; }
+.inspect-rel-item { padding:2px 0; }
+
+/* ─── CANVAS ─────────────────────────────────────────────── */
+#graph-svg { width:100%; height:100%; }
+.node circle { cursor:pointer; transition:r .2s; }
+.node text { pointer-events:none; font-family:'JetBrains Mono',monospace; }
+.link { stroke-opacity:.25; transition:stroke-opacity .3s, stroke-width .3s; }
+.link.active { stroke-opacity:.9; }
+.link-label { font-family:'JetBrains Mono',monospace; font-size:8px; fill:#3a6070; pointer-events:none; }
+.link-label.active { fill:#00e5ff; }
+
+/* canvas overlay pills */
+.canvas-pill { position:absolute; background:var(--bg2); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:10px; color:var(--text2); font-family:'JetBrains Mono',monospace; pointer-events:none; }
+#pill-tl { top:14px; left:14px; }
+#pill-tr { top:14px; right:14px; }
+
+/* mini stats overlay */
+#mini-stats { position:absolute; bottom:14px; left:14px; display:flex; gap:8px; }
+.mini-stat { background:rgba(3,13,16,.85); border:1px solid var(--border); border-radius:4px; padding:5px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; backdrop-filter:blur(8px); }
+.mini-stat span { color:var(--cyan); font-weight:700; }
+
+/* ─── RIGHT PANEL ────────────────────────────────────────── */
+#chat-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+#chat-history { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px; }
+.msg { border-radius:var(--r); padding:12px 14px; font-size:12px; line-height:1.7; animation:fadeUp .3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-user { background:var(--bg3); border:1px solid var(--border2); color:var(--text0); margin-left:20px; }
+.msg-user .msg-role { color:var(--violet); font-size:9px; letter-spacing:2px; margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
+.msg-ai { background:var(--bg0); border:1px solid var(--border); color:var(--text0); margin-right:20px; }
+.msg-ai .msg-role { color:var(--cyan); font-size:9px; letter-spacing:2px; margin-bottom:6px; font-family:'JetBrains Mono',monospace; display:flex; align-items:center; gap:6px; }
+.msg-thinking { border-left:2px solid var(--cyan3); padding-left:10px; margin-top:8px; font-size:10px; color:var(--text2); font-family:'JetBrains Mono',monospace; }
+.msg-meta { margin-top:8px; display:flex; gap:10px; font-size:9px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+
+/* Pipeline steps in message */
+.pipeline-steps { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.pipe-step { padding:3px 8px; border-radius:3px; font-size:9px; font-family:'JetBrains Mono',monospace; border:1px solid; }
+.pipe-step.done  { border-color:var(--green3); color:var(--green); background:#00ff9d11; }
+.pipe-step.active { border-color:var(--violet); color:var(--violet); background:#9c6fff11; animation:stepPulse 1s infinite; }
+.pipe-step.pending{ border-color:var(--border); color:var(--text3); }
+@keyframes stepPulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* Input area */
+#input-area { padding:14px 16px; border-top:1px solid var(--border); flex-shrink:0; }
+.samples-label { font-size:9px; color:var(--text3); letter-spacing:2px; margin-bottom:8px; font-family:'JetBrains Mono',monospace; }
+.samples { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+.sample-btn { text-align:left; background:none; border:1px solid var(--border); border-radius:4px; padding:5px 10px; color:var(--text2); font-size:10px; cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all .15s; }
+.sample-btn:hover { border-color:var(--cyan3); color:var(--cyan); background:#00e5ff08; }
+.input-row { display:flex; gap:8px; }
+#query-input { flex:1; background:var(--bg0); border:1px solid var(--border2); border-radius:var(--r); padding:10px 12px; color:var(--text0); font-size:12px; font-family:'JetBrains Mono',monospace; outline:none; transition:border-color .2s; resize:none; }
+#query-input:focus { border-color:var(--cyan); box-shadow:0 0 0 2px #00e5ff15; }
+#send-btn { width:44px; height:44px; border-radius:var(--r); background:linear-gradient(135deg,var(--cyan),var(--violet)); border:none; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; }
+#send-btn:hover { box-shadow:var(--glow-cyan); transform:scale(1.04); }
+#send-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ─── SCROLLBARS ─────────────────────────────────────────── */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:var(--bg0); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* ─── PARTICLES ──────────────────────────────────────────── */
+#particle-canvas { position:absolute; inset:0; pointer-events:none; z-index:2; }
+
+/* ─── MODAL ──────────────────────────────────────────────── */
+#modal { display:none; position:fixed; inset:0; background:#000000cc; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+#modal.open { display:flex; }
+#modal-box { background:var(--bg1); border:1px solid var(--border2); border-radius:10px; width:560px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 0 60px #00000088; }
+#modal-header { padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+#modal-body { padding:20px; overflow-y:auto; flex:1; }
+#modal-footer { padding:14px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+/* ─── TOAST ──────────────────────────────────────────────── */
+#toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--bg2); border:1px solid var(--cyan3); border-radius:6px; padding:10px 20px; font-size:12px; color:var(--cyan); font-family:'JetBrains Mono',monospace; z-index:200; transition:transform .3s ease; pointer-events:none; }
+#toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ─── LOADER ─────────────────────────────────────────────── */
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border2); border-top-color:var(--cyan); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ─── GRAPH TRAVERSAL HIGHLIGHT RING ─────────────────────── */
+.node-ring { pointer-events:none; }
+
+/* api key warning */
+#api-warning { display:none; background:#ff475711; border:1px solid var(--red); border-radius:var(--r); padding:10px 14px; font-size:11px; color:var(--red); font-family:'JetBrains Mono',monospace; margin-bottom:10px; }
+#api-warning.show { display:block; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── HEADER ─────────────────────────────────────────── -->
+  <header id="header">
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      <div>
+        <div class="logo-text">GRAPH<span>RAG</span> <span style="color:var(--text3);font-size:11px">SYSTEM</span></div>
+        <div class="logo-badge">LAB 11 · KNOWLEDGE GRAPH · RETRIEVAL AUGMENTED GENERATION</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="hstat"><div class="hstat-val" id="hstat-nodes">—</div><div class="hstat-lbl">NODES</div></div>
+      <div class="hstat"><div class="hstat-val" id="hstat-edges">—</div><div class="hstat-lbl">EDGES</div></div>
+      <div class="hstat"><div class="hstat-val" id="hstat-queries">0</div><div class="hstat-lbl">QUERIES</div></div>
+      <div class="hstat"><div class="hstat-val" id="hstat-hits">0</div><div class="hstat-lbl">AVG NODES/QUERY</div></div>
+    </div>
+    <div class="header-actions">
+      <div id="status-dot"></div>
+      <button class="btn" onclick="openApiModal()">⚙ API KEY</button>
+      <button class="btn" onclick="exportChat()">↓ EXPORT</button>
+      <button class="btn btn-primary" onclick="resetGraph()">↺ RESET</button>
+    </div>
+  </header>
+
+  <!-- ── SIDEBAR ────────────────────────────────────────── -->
+  <aside id="sidebar">
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">NODE FILTERS</span></div>
+      <div class="section-body">
+        <div class="filter-grid" id="filter-grid"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">TRAVERSAL DEPTH</span></div>
+      <div class="section-body">
+        <div class="depth-row">
+          <span class="depth-label">HOP DEPTH</span>
+          <button class="depth-btn" onclick="changeDepth(-1)">−</button>
+          <span class="depth-val" id="depth-val">2</span>
+          <button class="depth-btn" onclick="changeDepth(1)">+</button>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:1.7">
+          Deeper hops = more context<br/>but larger LLM prompt
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">CYPHER QUERY</span></div>
+      <div class="section-body">
+        <div id="cypher-box">Waiting for query...</div>
+      </div>
+    </div>
+
+    <div class="section" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div class="section-header"><span class="section-title">NODE INSPECTOR</span></div>
+      <div id="inspector"><div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:1.8">Hover over graph nodes<br/>to inspect entities.</div></div>
+    </div>
+
+  </aside>
+
+  <!-- ── GRAPH CANVAS ───────────────────────────────────── -->
+  <main id="canvas">
+    <canvas id="particle-canvas"></canvas>
+    <svg id="graph-svg"></svg>
+    <div class="canvas-pill" id="pill-tl">FORCE-DIRECTED · D3 v7</div>
+    <div class="canvas-pill" id="pill-tr" id="pill-tr">KNOWLEDGE GRAPH</div>
+    <div id="mini-stats">
+      <div class="mini-stat">Nodes: <span id="ms-nodes">—</span></div>
+      <div class="mini-stat">Edges: <span id="ms-edges">—</span></div>
+      <div class="mini-stat">Retrieved: <span id="ms-retrieved">—</span></div>
+    </div>
+  </main>
+
+  <!-- ── RIGHT PANEL ────────────────────────────────────── -->
+  <aside id="panel">
+    <div id="chat-header">
+      <div>
+        <div style="font-size:13px;font-weight:600">GraphRAG Assistant</div>
+        <div style="font-size:9px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace;margin-top:2px">POWERED BY CLAUDE · GRAPH CONTEXT</div>
+      </div>
+      <div class="spinner" id="chat-spinner" style="display:none"></div>
+    </div>
+
+    <div id="chat-history">
+      <div class="msg msg-ai">
+        <div class="msg-role">⬡ GRAPHRAG SYSTEM</div>
+        <div>Welcome! This system uses a <strong>knowledge graph</strong> to provide structured context to Claude — far more accurate than naive RAG.</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text2)">The pipeline: <span style="color:var(--cyan)">Extract entities</span> → <span style="color:var(--violet)">Traverse graph</span> → <span style="color:var(--green)">Generate answer</span></div>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div id="api-warning">⚠ No API key set. Click ⚙ API KEY to configure.</div>
+      <div class="samples-label">SAMPLE QUERIES</div>
+      <div class="samples" id="samples"></div>
+      <div class="input-row">
+        <textarea id="query-input" rows="2" placeholder="Ask anything about the knowledge graph…"></textarea>
+        <button id="send-btn" onclick="handleQuery()" title="Send (Enter)">→</button>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ── MODALS ─────────────────────────────────────────────── -->
+<div id="modal">
+  <div id="modal-box">
+    <div id="modal-header">
+      <div style="font-size:14px;font-weight:600" id="modal-title">API Configuration</div>
+      <button class="btn" onclick="closeModal()">✕ CLOSE</button>
+    </div>
+    <div id="modal-body"></div>
+    <div id="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<div id="toast">Copied to clipboard!</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  KNOWLEDGE GRAPH DATA
+// ═══════════════════════════════════════════════════════════
+const GRAPH_DATA = {
+  nodes: [
+    // PEOPLE
+    { id:"alice",    label:"Alice Chen",     type:"person",  x:320,y:200, desc:"Senior ML Engineer at NeuroSys. Expert in graph neural networks, transformer architectures, and retrieval-augmented generation pipelines.",  skills:["GNN","Transformers","GraphRAG","Python"] },
+    { id:"bob",      label:"Bob Ramos",      type:"person",  x:560,y:110, desc:"Lead Data Scientist at VectorDB Inc. Specialises in vector embeddings, ANN algorithms, and hybrid search systems.",                              skills:["Vector DB","HNSW","Python","Rust"] },
+    { id:"carol",    label:"Carol Lee",      type:"person",  x:760,y:230, desc:"Research Scientist at NeuroSys. Published 12 papers on knowledge graph construction, entity resolution, and ontology engineering.",              skills:["KG Construction","NLP","Ontology","Cypher"] },
+    { id:"dave",     label:"Dave Patel",     type:"person",  x:490,y:340, desc:"Principal AI Architect at DataBridge. Leads the enterprise GraphRAG platform team, driving production deployments at scale.",                   skills:["System Design","GraphRAG","LangChain","AWS"] },
+    { id:"eve",      label:"Eve Nakamura",   type:"person",  x:180,y:320, desc:"Backend Engineer at VectorDB Inc. Builds high-performance distributed graph query engines with sub-millisecond latency.",                        skills:["Distributed Systems","C++","Graph DBs","Kafka"] },
+    { id:"frank",    label:"Frank Torres",   type:"person",  x:700,y:410, desc:"DevRel Engineer at DataBridge. Creates tutorials and demos for the GraphRAG developer community.",                                               skills:["GraphRAG","Demo","Python","Community"] },
+    { id:"grace",    label:"Grace Kim",      type:"person",  x:120,y:150, desc:"Research Director at NeuroSys. Oversees all AI research projects. PhD in Computational Linguistics from MIT.",                                   skills:["Leadership","NLP","Research","Strategy"] },
+    // COMPANIES
+    { id:"neurosys",   label:"NeuroSys",       type:"company", x:160,y:110, desc:"AI research company focused on neuro-symbolic reasoning and knowledge graph-powered AI systems. Founded 2019, Series B." },
+    { id:"vectordb",   label:"VectorDB Inc.",  type:"company", x:700,y:340, desc:"Database company specialising in hybrid vector + graph storage. Their flagship product supports 10B+ vectors with graph traversal." },
+    { id:"databridge", label:"DataBridge",     type:"company", x:620,y:450, desc:"Enterprise data platform building graph-native AI applications. Fortune 500 customers in finance and healthcare." },
+    // TECHNOLOGIES
+    { id:"graphrag",   label:"GraphRAG",       type:"tech",    x:360,y:440, desc:"Graph Retrieval Augmented Generation. Uses knowledge graph traversal to enrich LLM context. Dramatically reduces hallucination vs vector-only RAG." },
+    { id:"neo4j",      label:"Neo4j",          type:"tech",    x:200,y:450, desc:"World's leading graph database. Cypher query language, native graph storage, and built-in vector search via indexes." },
+    { id:"langchain",  label:"LangChain",      type:"tech",    x:530,y:220, desc:"Framework for building LLM-powered apps. GraphRAG chains available via the Neo4j integration module." },
+    { id:"tensorflow", label:"TensorFlow",     type:"tech",    x:80, y:230, desc:"Google's open-source ML framework. Used for training graph neural network models at NeuroSys." },
+    { id:"llamaindex", label:"LlamaIndex",     type:"tech",    x:420,y:140, desc:"Data framework for LLM apps. KnowledgeGraphIndex enables property graph-based retrieval with automatic extraction." },
+    { id:"pinecone",   label:"Pinecone",       type:"tech",    x:820,y:320, desc:"Managed vector database. Used alongside Neo4j in hybrid retrieval pipelines for semantic + graph search." },
+    // PROJECTS
+    { id:"atlas",    label:"Project Atlas",   type:"project", x:430,y:60,  desc:"Internal R&D project at NeuroSys + DataBridge: building a production GraphRAG search assistant for enterprise knowledge bases." },
+    { id:"mercury",  label:"Project Mercury", type:"project", x:720,y:150, desc:"Real-time knowledge graph ingestion pipeline. Processes 50K documents/hour, auto-extracts entities and relationships." },
+    { id:"nexus",    label:"Project Nexus",   type:"project", x:270,y:500, desc:"Open-source GraphRAG benchmark suite. Compares retrieval quality across graph, vector, and hybrid approaches." },
+    // CONCEPTS
+    { id:"rag",      label:"Vector RAG",      type:"concept", x:640,y:260, desc:"Traditional RAG using vector similarity search. Fast but lacks structural reasoning. GraphRAG outperforms it on multi-hop questions." },
+    { id:"kg",       label:"Knowledge Graph", type:"concept", x:300,y:330, desc:"Graph-structured representation of knowledge: entities (nodes) + relationships (edges) + properties. Foundation of GraphRAG." },
+  ],
+  edges: [
+    // Works at
+    {s:"alice",  t:"neurosys",   r:"WORKS_AT"},
+    {s:"carol",  t:"neurosys",   r:"WORKS_AT"},
+    {s:"grace",  t:"neurosys",   r:"WORKS_AT"},
+    {s:"bob",    t:"vectordb",   r:"WORKS_AT"},
+    {s:"eve",    t:"vectordb",   r:"WORKS_AT"},
+    {s:"dave",   t:"databridge", r:"WORKS_AT"},
+    {s:"frank",  t:"databridge", r:"WORKS_AT"},
+    // Knows
+    {s:"alice",  t:"bob",        r:"KNOWS"},
+    {s:"alice",  t:"carol",      r:"KNOWS"},
+    {s:"alice",  t:"dave",       r:"KNOWS"},
+    {s:"dave",   t:"carol",      r:"KNOWS"},
+    {s:"dave",   t:"bob",        r:"KNOWS"},
+    {s:"bob",    t:"eve",        r:"KNOWS"},
+    {s:"grace",  t:"carol",      r:"MANAGES"},
+    {s:"grace",  t:"alice",      r:"MANAGES"},
+    {s:"frank",  t:"dave",       r:"KNOWS"},
+    // Uses / expertise
+    {s:"alice",  t:"graphrag",   r:"EXPERT_IN"},
+    {s:"alice",  t:"tensorflow", r:"USES"},
+    {s:"alice",  t:"langchain",  r:"USES"},
+    {s:"alice",  t:"llamaindex", r:"USES"},
+    {s:"bob",    t:"neo4j",      r:"EXPERT_IN"},
+    {s:"bob",    t:"pinecone",   r:"USES"},
+    {s:"carol",  t:"neo4j",      r:"EXPERT_IN"},
+    {s:"carol",  t:"graphrag",   r:"USES"},
+    {s:"carol",  t:"kg",         r:"EXPERT_IN"},
+    {s:"dave",   t:"graphrag",   r:"EXPERT_IN"},
+    {s:"dave",   t:"langchain",  r:"USES"},
+    {s:"eve",    t:"neo4j",      r:"USES"},
+    {s:"frank",  t:"graphrag",   r:"USES"},
+    {s:"grace",  t:"tensorflow", r:"USES"},
+    // Projects
+    {s:"alice",  t:"atlas",      r:"WORKS_ON"},
+    {s:"dave",   t:"atlas",      r:"WORKS_ON"},
+    {s:"carol",  t:"mercury",    r:"WORKS_ON"},
+    {s:"bob",    t:"mercury",    r:"WORKS_ON"},
+    {s:"alice",  t:"nexus",      r:"WORKS_ON"},
+    {s:"eve",    t:"nexus",      r:"WORKS_ON"},
+    {s:"frank",  t:"nexus",      r:"WORKS_ON"},
+    // Tech relations
+    {s:"graphrag",  t:"neo4j",      r:"BUILT_WITH"},
+    {s:"graphrag",  t:"langchain",  r:"INTEGRATES"},
+    {s:"graphrag",  t:"llamaindex", r:"INTEGRATES"},
+    {s:"graphrag",  t:"kg",         r:"USES"},
+    {s:"graphrag",  t:"rag",        r:"IMPROVES"},
+    {s:"atlas",     t:"graphrag",   r:"USES"},
+    {s:"atlas",     t:"langchain",  r:"USES"},
+    {s:"mercury",   t:"neo4j",      r:"USES"},
+    {s:"mercury",   t:"kg",         r:"PRODUCES"},
+    {s:"nexus",     t:"graphrag",   r:"BENCHMARKS"},
+    {s:"nexus",     t:"rag",        r:"BENCHMARKS"},
+    {s:"neo4j",     t:"kg",         r:"STORES"},
+    {s:"pinecone",  t:"rag",        r:"POWERS"},
+    {s:"langchain", t:"llamaindex", r:"COMPETES_WITH"},
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════
+//  COLOUR CONFIG
+// ═══════════════════════════════════════════════════════════
+const TYPE_CFG = {
+  person:  { fill:"#00e5ff", stroke:"#007b8a", icon:"◉", textFill:"#00e5ff" },
+  company: { fill:"#ff6b35", stroke:"#aa3800", icon:"⬡", textFill:"#ff6b35" },
+  tech:    { fill:"#9c6fff", stroke:"#5a30bb", icon:"◈", textFill:"#9c6fff" },
+  project: { fill:"#ffd166", stroke:"#aa8800", icon:"◆", textFill:"#ffd166" },
+  concept: { fill:"#00ff9d", stroke:"#00884f", icon:"◎", textFill:"#00ff9d" },
+};
+const EDGE_CFG = {
+  WORKS_AT:"#ff6b35", WORKS_ON:"#ffd166", KNOWS:"#00e5ff", MANAGES:"#ff6b9d",
+  EXPERT_IN:"#00ff9d", USES:"#9c6fff", INTEGRATES:"#00e5ff", BUILT_WITH:"#9c6fff",
+  BENCHMARKS:"#ffd166", PRODUCES:"#00ff9d", STORES:"#9c6fff", POWERS:"#ff6b35",
+  IMPROVES:"#00ff9d", COMPETES_WITH:"#ff4757",
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let API_KEY = localStorage.getItem('graphrag_api_key') || '';
+let traversalDepth = 2;
+let queryCount = 0;
+let totalNodesRetrieved = 0;
+let activeFilters = new Set(Object.keys(TYPE_CFG));
+let lastRetrieval = null;
+let simulation, svg, linkGroup, nodeGroup, labelGroup;
+let highlightedNodes = new Set();
+let highlightedEdges = new Set();
+let pCanvas, pCtx, particles = [];
+const nodeMap = Object.fromEntries(GRAPH_DATA.nodes.map(n => [n.id, n]));
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  updateHeaderStats();
+  buildFilterGrid();
+  buildSamples();
+  initGraph();
+  initParticleCanvas();
+  checkApiKey();
+  document.getElementById('query-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuery(); }
+  });
+});
+
+function checkApiKey() {
+  document.getElementById('api-warning').classList.toggle('show', !API_KEY);
+}
+
+function updateHeaderStats() {
+  document.getElementById('hstat-nodes').textContent = GRAPH_DATA.nodes.length;
+  document.getElementById('hstat-edges').textContent = GRAPH_DATA.edges.length;
+  document.getElementById('hstat-queries').textContent = queryCount;
+  document.getElementById('hstat-hits').textContent = queryCount ? Math.round(totalNodesRetrieved / queryCount) : 0;
+  document.getElementById('ms-nodes').textContent = GRAPH_DATA.nodes.length;
+  document.getElementById('ms-edges').textContent = GRAPH_DATA.edges.length;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILTER GRID
+// ═══════════════════════════════════════════════════════════
+function buildFilterGrid() {
+  const grid = document.getElementById('filter-grid');
+  grid.innerHTML = '';
+  Object.entries(TYPE_CFG).forEach(([type, cfg]) => {
+    const count = GRAPH_DATA.nodes.filter(n => n.type === type).length;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip active';
+    chip.innerHTML = `<span class="filter-dot" style="background:${cfg.fill}"></span><span>${type} (${count})</span>`;
+    chip.style.borderColor = cfg.stroke;
+    chip.style.setProperty('--active-bg', cfg.fill);
+    chip.dataset.type = type;
+    chip.onclick = () => toggleFilter(type, chip, cfg);
+    setChipActive(chip, true, cfg);
+    grid.appendChild(chip);
+  });
+}
+
+function setChipActive(chip, on, cfg) {
+  chip.classList.toggle('active', on);
+  chip.style.background = on ? cfg.fill + '22' : 'var(--bg2)';
+  chip.style.color = on ? cfg.fill : 'var(--text2)';
+  chip.style.borderColor = on ? cfg.stroke : 'var(--border)';
+}
+
+function toggleFilter(type, chip, cfg) {
+  if (activeFilters.has(type)) activeFilters.delete(type);
+  else activeFilters.add(type);
+  setChipActive(chip, activeFilters.has(type), cfg);
+  updateNodeVisibility();
+}
+
+function updateNodeVisibility() {
+  nodeGroup && nodeGroup.selectAll('.node')
+    .style('opacity', d => activeFilters.has(d.type) ? 1 : 0.07)
+    .style('pointer-events', d => activeFilters.has(d.type) ? 'all' : 'none');
+  linkGroup && linkGroup.selectAll('.link')
+    .style('opacity', d => {
+      const sOk = activeFilters.has(nodeMap[d.source.id || d.source]?.type);
+      const tOk = activeFilters.has(nodeMap[d.target.id || d.target]?.type);
+      return sOk && tOk ? (highlightedEdges.has(d._idx) ? 0.9 : 0.18) : 0.03;
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAMPLE QUERIES
+// ═══════════════════════════════════════════════════════════
+const SAMPLES_DATA = [
+  "Who at NeuroSys works on GraphRAG?",
+  "What tech does Alice use?",
+  "Which projects benchmark RAG?",
+  "How is Neo4j connected to GraphRAG?",
+  "Who manages Carol and Alice?",
+];
+
+function buildSamples() {
+  const c = document.getElementById('samples');
+  SAMPLES_DATA.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sample-btn';
+    b.textContent = `» ${s}`;
+    b.onclick = () => { document.getElementById('query-input').value = s; handleQuery(); };
+    c.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRAVERSAL DEPTH
+// ═══════════════════════════════════════════════════════════
+function changeDepth(d) {
+  traversalDepth = Math.max(1, Math.min(4, traversalDepth + d));
+  document.getElementById('depth-val').textContent = traversalDepth;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GRAPH RAG RETRIEVAL
+// ═══════════════════════════════════════════════════════════
+function retrieveSubgraph(query) {
+  const q = query.toLowerCase();
+  const words = q.split(/\W+/).filter(w => w.length > 2);
+
+  // Score-based seed detection
+  const scores = {};
+  GRAPH_DATA.nodes.forEach(n => {
+    let score = 0;
+    const name = n.label.toLowerCase();
+    const desc = n.desc.toLowerCase();
+    const type = n.type.toLowerCase();
+    words.forEach(w => {
+      if (name.includes(w)) score += 10;
+      if (type === w) score += 8;
+      if (desc.includes(w)) score += 2;
+      if (n.skills?.some(s => s.toLowerCase().includes(w))) score += 5;
+    });
+    if (score > 0) scores[n.id] = score;
+  });
+
+  const seedIds = new Set(Object.entries(scores).filter(([,v]) => v >= 2).map(([k]) => k));
+
+  // Multi-hop BFS
+  const visited = new Set(seedIds);
+  let frontier = new Set(seedIds);
+  const visitedEdges = new Set();
+
+  for (let hop = 0; hop < traversalDepth; hop++) {
+    const nextFrontier = new Set();
+    GRAPH_DATA.edges.forEach((e, i) => {
+      const inFrontier = frontier.has(e.s) || frontier.has(e.t);
+      if (inFrontier) {
+        if (!visited.has(e.s)) { visited.add(e.s); nextFrontier.add(e.s); }
+        if (!visited.has(e.t)) { visited.add(e.t); nextFrontier.add(e.t); }
+        visitedEdges.add(i);
+      }
+    });
+    frontier = nextFrontier;
+    if (frontier.size === 0) break;
+  }
+
+  // Build context string
+  const ctxNodes = [...visited].map(id => nodeMap[id]).filter(Boolean);
+  const ctxEdges = [...visitedEdges].map(i => GRAPH_DATA.edges[i]);
+
+  let ctx = "=== KNOWLEDGE GRAPH CONTEXT ===\n\n";
+  ctx += "ENTITIES:\n";
+  ctxNodes.forEach(n => {
+    ctx += `  [${n.type.toUpperCase()}] ${n.label}`;
+    if (n.skills) ctx += ` | skills: ${n.skills.join(', ')}`;
+    ctx += `\n    → ${n.desc}\n`;
+  });
+  ctx += "\nRELATIONSHIPS:\n";
+  ctxEdges.forEach(e => {
+    const s = nodeMap[e.s], t = nodeMap[e.t];
+    if (s && t) ctx += `  ${s.label} -[${e.r}]→ ${t.label}\n`;
+  });
+
+  // Cypher query
+  const cypher = buildCypher(query, seedIds, traversalDepth);
+
+  return { seedIds, visited, visitedEdges, ctxNodes, ctxEdges, ctx, cypher };
+}
+
+function buildCypher(query, seedIds, depth) {
+  const names = [...seedIds].map(id => nodeMap[id]?.label).filter(Boolean).slice(0, 3);
+  if (names.length === 0) {
+    return `<span class="cypher-kw">MATCH</span> (n)\n<span class="cypher-kw">WHERE</span> n.desc <span class="cypher-kw">CONTAINS</span> <span class="cypher-str">"${query.slice(0,20)}"</span>\n<span class="cypher-kw">RETURN</span> n <span class="cypher-kw">LIMIT</span> <span class="cypher-num">10</span>`;
+  }
+  const matchNames = names.map(n => `<span class="cypher-str">"${n}"</span>`).join(', ');
+  return `<span class="cypher-kw">MATCH</span> (seed)\n<span class="cypher-kw">WHERE</span> seed.name <span class="cypher-kw">IN</span> [${matchNames}]\n\n<span class="cypher-kw">CALL</span> apoc.path.subgraphAll(\n  seed, {maxLevel: <span class="cypher-num">${depth}</span>}\n) <span class="cypher-kw">YIELD</span> nodes, relationships\n\n<span class="cypher-kw">RETURN</span> nodes, relationships`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CLAUDE API
+// ═══════════════════════════════════════════════════════════
+async function askClaude(query, ctx) {
+  if (!API_KEY) throw new Error('NO_API_KEY');
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: `You are a GraphRAG assistant. Answer ONLY using the knowledge graph context provided. Be precise, reference specific entity names and relationships. Highlight key connections. Format as 2-4 readable sentences. If the graph context doesn't contain enough info, say so clearly.`,
+      messages: [{ role: 'user', content: `${ctx}\n\nQUESTION: ${query}` }]
+    })
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  return data.content?.[0]?.text || 'No response.';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HANDLE QUERY
+// ═══════════════════════════════════════════════════════════
+async function handleQuery() {
+  const input = document.getElementById('query-input');
+  const query = input.value.trim();
+  if (!query) return;
+  input.value = '';
+
+  if (!API_KEY) {
+    addMessage('user', query);
+    addMessage('ai', '⚠️ Please configure your API key first — click **⚙ API KEY** in the header.', null, null, []);
+    return;
+  }
+
+  setLoading(true);
+  addMessage('user', query);
+
+  const msgId = 'msg-' + Date.now();
+  const aiMsg = addMessage('ai', '', msgId, null, ['EXTRACT', 'TRAVERSE', 'GENERATE']);
+
+  // Step 1: Extract
+  await sleep(300);
+  updateSteps(msgId, 1);
+  const retrieval = retrieveSubgraph(query);
+  lastRetrieval = retrieval;
+
+  // Update cypher
+  document.getElementById('cypher-box').innerHTML = retrieval.cypher;
+
+  // Step 2: Traverse & highlight
+  await sleep(200);
+  updateSteps(msgId, 2);
+  setHighlight(retrieval.visited, retrieval.visitedEdges);
+  spawnParticles(retrieval.visited, retrieval.visitedEdges);
+  updateInspector(retrieval.ctxNodes, retrieval.ctxEdges);
+  updateMiniStats(retrieval.visited.size);
+
+  // Step 3: Generate
+  await sleep(400);
+  updateSteps(msgId, 3);
+
+  try {
+    const answer = await askClaude(query, retrieval.ctx);
+    const elapsed = ((Date.now() - parseInt(msgId.split('-')[1])) / 1000).toFixed(1);
+    updateSteps(msgId, -1);
+    typewriterUpdate(msgId, answer, {
+      nodes: retrieval.ctxNodes.length,
+      edges: retrieval.ctxEdges.length,
+      depth: traversalDepth,
+      time: elapsed + 's',
+      seeds: retrieval.seedIds.size,
+    });
+
+    queryCount++;
+    totalNodesRetrieved += retrieval.ctxNodes.length;
+    updateHeaderStats();
+  } catch (err) {
+    updateSteps(msgId, -1);
+    const errMsg = err.message === 'NO_API_KEY'
+      ? 'Please set your API key via **⚙ API KEY**.'
+      : `API error: ${err.message}`;
+    typewriterUpdate(msgId, '⚠️ ' + errMsg, null);
+  }
+
+  setLoading(false);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════════════════════════
+//  CHAT MESSAGES
+// ═══════════════════════════════════════════════════════════
+function addMessage(role, text, id, meta, steps) {
+  const history = document.getElementById('chat-history');
+  const div = document.createElement('div');
+  div.className = `msg msg-${role === 'user' ? 'user' : 'ai'}`;
+  if (id) div.id = id;
+
+  if (role === 'user') {
+    div.innerHTML = `<div class="msg-role">YOU</div><div class="msg-body">${escHtml(text)}</div>`;
+  } else {
+    let stepsHtml = '';
+    if (steps) {
+      stepsHtml = `<div class="pipeline-steps" id="steps-${id}">
+        ${steps.map((s,i) => `<span class="pipe-step pending" id="step-${id}-${i}">${s}</span>`).join('')}
+      </div>`;
+    }
+    div.innerHTML = `<div class="msg-role"><span class="spinner" id="spin-${id}"></span> ⬡ GRAPHRAG</div>
+      ${stepsHtml}
+      <div class="msg-body" id="body-${id}">${text}</div>`;
+  }
+
+  history.appendChild(div);
+  history.scrollTop = history.scrollHeight;
+  return div;
+}
+
+function updateSteps(msgId, activeIdx) {
+  const steps = ['EXTRACT','TRAVERSE','GENERATE'];
+  steps.forEach((_, i) => {
+    const el = document.getElementById(`step-${msgId}-${i}`);
+    if (!el) return;
+    el.className = 'pipe-step ' + (activeIdx === -1 ? 'done' : i < activeIdx ? 'done' : i === activeIdx ? 'active' : 'pending');
+  });
+}
+
+function typewriterUpdate(msgId, text, meta) {
+  const body = document.getElementById(`body-${msgId}`);
+  const spin = document.getElementById(`spin-${msgId}`);
+  if (spin) spin.style.display = 'none';
+  if (!body) return;
+  body.textContent = '';
+  let i = 0;
+  const interval = setInterval(() => {
+    body.textContent = text.slice(0, ++i);
+    document.getElementById('chat-history').scrollTop = 99999;
+    if (i >= text.length) {
+      clearInterval(interval);
+      if (meta) {
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'msg-meta';
+        metaDiv.innerHTML = `
+          <span>🔵 ${meta.seeds} seeds</span>
+          <span>⬡ ${meta.nodes} nodes</span>
+          <span>— ${meta.edges} edges</span>
+          <span>↕ depth ${meta.depth}</span>
+          <span>⏱ ${meta.time}</span>`;
+        body.parentNode.appendChild(metaDiv);
+        document.getElementById('chat-history').scrollTop = 99999;
+      }
+    }
+  }, 15);
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function setLoading(v) {
+  document.getElementById('send-btn').disabled = v;
+  document.getElementById('chat-spinner').style.display = v ? 'inline-block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GRAPH HIGHLIGHT
+// ═══════════════════════════════════════════════════════════
+function setHighlight(nodeIds, edgeIdxs) {
+  highlightedNodes = nodeIds;
+  highlightedEdges = edgeIdxs;
+
+  nodeGroup.selectAll('.node').each(function(d) {
+    const active = highlightedNodes.has(d.id);
+    const isSeed = lastRetrieval?.seedIds.has(d.id);
+    const cfg = TYPE_CFG[d.type];
+    d3.select(this).select('circle')
+      .transition().duration(350)
+      .attr('r', active ? (isSeed ? 20 : 16) : 12)
+      .attr('fill', active ? cfg.fill : '#0a1c22')
+      .attr('stroke', active ? cfg.fill : cfg.stroke)
+      .attr('stroke-width', active ? (isSeed ? 3 : 2) : 1)
+      .attr('filter', active ? 'url(#glow-node)' : 'none')
+      .attr('opacity', active ? 1 : 0.35);
+    d3.select(this).select('text.node-label')
+      .transition().duration(350)
+      .attr('opacity', active ? 1 : 0.3)
+      .attr('font-size', active ? 11 : 9)
+      .attr('fill', active ? cfg.textFill : 'var(--text3)');
+    d3.select(this).select('.node-type-icon')
+      .transition().duration(350)
+      .attr('opacity', active ? 1 : 0.1);
+  });
+
+  linkGroup.selectAll('.link').each(function(d) {
+    const active = highlightedEdges.has(d._idx);
+    d3.select(this)
+      .transition().duration(350)
+      .attr('stroke-width', active ? 2 : 1)
+      .attr('stroke-opacity', active ? 0.85 : 0.1)
+      .attr('filter', active ? 'url(#glow-link)' : 'none');
+  });
+
+  labelGroup.selectAll('.link-label')
+    .attr('opacity', d => highlightedEdges.has(d._idx) ? 0.9 : 0);
+}
+
+function updateMiniStats(retrieved) {
+  document.getElementById('ms-retrieved').textContent = retrieved;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NODE INSPECTOR
+// ═══════════════════════════════════════════════════════════
+function updateInspector(nodes, edges) {
+  const el = document.getElementById('inspector');
+  el.innerHTML = '';
+  nodes.slice(0, 8).forEach(n => {
+    const cfg = TYPE_CFG[n.type];
+    const rels = edges.filter(e => e.s === n.id || e.t === n.id).map(e => {
+      const other = e.s === n.id ? nodeMap[e.t] : nodeMap[e.s];
+      const dir = e.s === n.id ? '→' : '←';
+      return `${dir} [${e.r}] ${other?.label || '?'}`;
+    });
+    el.innerHTML += `
+      <div class="inspect-card" style="border-color:${cfg.stroke}">
+        <div class="inspect-name" style="color:${cfg.fill}">${cfg.icon} ${n.label}</div>
+        <div class="inspect-type" style="color:${cfg.stroke}">${n.type.toUpperCase()}</div>
+        <div class="inspect-desc">${n.desc.slice(0, 100)}…</div>
+        ${rels.length ? `<div class="inspect-rels">${rels.slice(0,4).map(r => `<div class="inspect-rel-item">${r}</div>`).join('')}</div>` : ''}
+      </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  D3 FORCE GRAPH
+// ═══════════════════════════════════════════════════════════
+function initGraph() {
+  const container = document.getElementById('canvas');
+  const W = container.clientWidth, H = container.clientHeight;
+
+  svg = d3.select('#graph-svg')
+    .attr('width', W).attr('height', H)
+    .call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => {
+      mainGroup.attr('transform', e.transform);
+    }));
+
+  const defs = svg.append('defs');
+  defs.append('filter').attr('id','glow-node').html(`
+    <feGaussianBlur stdDeviation="4" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`);
+  defs.append('filter').attr('id','glow-link').html(`
+    <feGaussianBlur stdDeviation="2" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`);
+
+  // Arrow markers
+  Object.entries(EDGE_CFG).forEach(([rel, color]) => {
+    defs.append('marker').attr('id',`arrow-${rel}`)
+      .attr('viewBox','0 -3 8 6').attr('refX',22).attr('refY',0)
+      .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+      .append('path').attr('d','M0,-3L8,0L0,3').attr('fill',color).attr('opacity',0.6);
+  });
+
+  const mainGroup = svg.append('g');
+
+  // Prep edge data
+  const edgesData = GRAPH_DATA.edges.map((e, i) => ({ ...e, _idx: i, source: e.s, target: e.t }));
+  const nodesData = GRAPH_DATA.nodes.map(n => ({ ...n }));
+
+  simulation = d3.forceSimulation(nodesData)
+    .force('link', d3.forceLink(edgesData).id(d => d.id).distance(90).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-320))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide(28))
+    .force('x', d3.forceX(W / 2).strength(0.04))
+    .force('y', d3.forceY(H / 2).strength(0.04));
+
+  // Links
+  linkGroup = mainGroup.append('g').attr('class','links');
+  const links = linkGroup.selectAll('.link')
+    .data(edgesData).enter().append('line')
+    .attr('class','link')
+    .attr('stroke', d => EDGE_CFG[d.r] || '#2a4a5a')
+    .attr('stroke-width', 1)
+    .attr('stroke-opacity', 0.18)
+    .attr('marker-end', d => `url(#arrow-${d.r})`);
+
+  // Edge labels
+  labelGroup = mainGroup.append('g').attr('class','link-labels');
+  const linkLabels = labelGroup.selectAll('.link-label')
+    .data(edgesData).enter().append('text')
+    .attr('class','link-label')
+    .attr('opacity', 0)
+    .attr('text-anchor','middle')
+    .attr('font-size', 8)
+    .attr('fill','var(--cyan)')
+    .text(d => d.r);
+
+  // Nodes
+  nodeGroup = mainGroup.append('g').attr('class','nodes');
+  const nodes = nodeGroup.selectAll('.node')
+    .data(nodesData).enter().append('g')
+    .attr('class','node')
+    .call(d3.drag()
+      .on('start', (ev, d) => { if (!ev.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+      .on('end',   (ev, d) => { if (!ev.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }))
+    .on('mouseenter', (ev, d) => showNodeTooltip(ev, d))
+    .on('mouseleave', hideNodeTooltip)
+    .on('click', (ev, d) => focusNode(d));
+
+  nodes.append('circle')
+    .attr('r', 12)
+    .attr('fill', '#0a1c22')
+    .attr('stroke', d => TYPE_CFG[d.type].stroke)
+    .attr('stroke-width', 1)
+    .attr('opacity', 0.5);
+
+  nodes.append('text')
+    .attr('class','node-type-icon')
+    .attr('text-anchor','middle').attr('dy','0.35em')
+    .attr('font-size', 10).attr('opacity', 0.5)
+    .attr('fill', d => TYPE_CFG[d.type].fill)
+    .attr('pointer-events','none')
+    .text(d => TYPE_CFG[d.type].icon);
+
+  nodes.append('text')
+    .attr('class','node-label')
+    .attr('text-anchor','middle')
+    .attr('dy', 26)
+    .attr('font-size', 9)
+    .attr('fill','var(--text3)')
+    .attr('opacity', 0.6)
+    .text(d => d.label);
+
+  simulation.on('tick', () => {
+    links
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    linkLabels
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2 - 4);
+    nodes.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  window.addEventListener('resize', () => {
+    const W2 = container.clientWidth, H2 = container.clientHeight;
+    svg.attr('width', W2).attr('height', H2);
+    simulation.force('center', d3.forceCenter(W2/2, H2/2)).restart();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOOLTIP
+// ═══════════════════════════════════════════════════════════
+let tooltip = null;
+function showNodeTooltip(ev, d) {
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.style.cssText = `position:fixed;background:#071418;border:1px solid var(--border2);border-radius:6px;padding:10px 14px;max-width:220px;font-size:11px;pointer-events:none;z-index:50;box-shadow:0 4px 24px #00000088;transition:opacity .15s;`;
+    document.body.appendChild(tooltip);
+  }
+  const cfg = TYPE_CFG[d.type];
+  tooltip.innerHTML = `
+    <div style="color:${cfg.fill};font-weight:700;margin-bottom:4px;font-size:12px">${cfg.icon} ${d.label}</div>
+    <div style="color:${cfg.stroke};font-size:9px;letter-spacing:2px;margin-bottom:6px;font-family:'JetBrains Mono',monospace">${d.type.toUpperCase()}</div>
+    <div style="color:var(--text1);line-height:1.6">${d.desc.slice(0,120)}…</div>
+    ${d.skills ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">${d.skills.map(s=>`<span style="background:${cfg.fill}22;color:${cfg.fill};border-radius:3px;padding:1px 5px;font-size:9px;font-family:'JetBrains Mono',monospace">${s}</span>`).join('')}</div>` : ''}`;
+  tooltip.style.opacity = '1';
+  tooltip.style.left = (ev.clientX + 12) + 'px';
+  tooltip.style.top = (ev.clientY - 10) + 'px';
+}
+function hideNodeTooltip() { if (tooltip) tooltip.style.opacity = '0'; }
+
+// ═══════════════════════════════════════════════════════════
+//  FOCUS ON NODE
+// ═══════════════════════════════════════════════════════════
+function focusNode(d) {
+  document.getElementById('query-input').value = `Tell me about ${d.label} and their connections`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLE SYSTEM
+// ═══════════════════════════════════════════════════════════
+function initParticleCanvas() {
+  pCanvas = document.getElementById('particle-canvas');
+  const container = document.getElementById('canvas');
+  pCanvas.width = container.clientWidth;
+  pCanvas.height = container.clientHeight;
+  pCtx = pCanvas.getContext('2d');
+  window.addEventListener('resize', () => {
+    pCanvas.width = container.clientWidth;
+    pCanvas.height = container.clientHeight;
+  });
+  requestAnimationFrame(animateParticles);
+}
+
+function spawnParticles(nodeIds, edgeIdxs) {
+  if (!simulation) return;
+  const allNodes = simulation.nodes();
+  const nodePositions = Object.fromEntries(allNodes.map(n => [n.id, { x: n.x, y: n.y }]));
+
+  // Get SVG transform
+  const svg = document.getElementById('graph-svg');
+  const mainG = svg.querySelector('g');
+  let tx = 0, ty = 0, scale = 1;
+  if (mainG) {
+    const t = mainG.getAttribute('transform') || '';
+    const tMatch = t.match(/translate\(([^,]+),([^)]+)\)/);
+    const sMatch = t.match(/scale\(([^)]+)\)/);
+    if (tMatch) { tx = parseFloat(tMatch[1]); ty = parseFloat(tMatch[2]); }
+    if (sMatch) scale = parseFloat(sMatch[1]);
+  }
+
+  GRAPH_DATA.edges.forEach((e, i) => {
+    if (!edgeIdxs.has(i)) return;
+    const s = nodePositions[e.s], t = nodePositions[e.t];
+    if (!s || !t) return;
+    const sx = s.x * scale + tx, sy = s.y * scale + ty;
+    const ex = t.x * scale + tx, ey = t.y * scale + ty;
+    const color = EDGE_CFG[e.r] || '#00e5ff';
+
+    for (let p = 0; p < 6; p++) {
+      const progress = Math.random();
+      particles.push({
+        x: sx + (ex - sx) * progress,
+        y: sy + (ey - sy) * progress,
+        vx: (ex - sx) / 80,
+        vy: (ey - sy) / 80,
+        life: 1,
+        decay: 0.015 + Math.random() * 0.02,
+        size: 1.5 + Math.random() * 2,
+        color,
+        ex, ey, sx, sy, progress,
+        trail: [],
+      });
+    }
+  });
+}
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.trail.push({ x: p.x, y: p.y, life: p.life });
+    if (p.trail.length > 8) p.trail.shift();
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= p.decay;
+
+    // Draw trail
+    p.trail.forEach((pt, i) => {
+      const a = (i / p.trail.length) * p.life * 0.5;
+      pCtx.beginPath();
+      pCtx.arc(pt.x, pt.y, p.size * (i / p.trail.length), 0, Math.PI * 2);
+      pCtx.fillStyle = p.color + Math.floor(a * 255).toString(16).padStart(2,'0');
+      pCtx.fill();
+    });
+
+    // Draw particle
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    pCtx.fillStyle = p.color + Math.floor(p.life * 220).toString(16).padStart(2,'0');
+    pCtx.fill();
+
+    // Glow
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+    const grad = pCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.5);
+    grad.addColorStop(0, p.color + '44');
+    grad.addColorStop(1, 'transparent');
+    pCtx.fillStyle = grad;
+    pCtx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════════════════
+function resetGraph() {
+  highlightedNodes = new Set();
+  highlightedEdges = new Set();
+  lastRetrieval = null;
+  particles = [];
+
+  nodeGroup.selectAll('.node circle')
+    .transition().duration(400)
+    .attr('r', 12).attr('fill', '#0a1c22')
+    .attr('stroke', d => TYPE_CFG[d.type].stroke)
+    .attr('stroke-width', 1).attr('opacity', 0.5).attr('filter', 'none');
+  nodeGroup.selectAll('.node text.node-label')
+    .transition().duration(400)
+    .attr('opacity', 0.6).attr('font-size', 9).attr('fill','var(--text3)');
+  linkGroup.selectAll('.link')
+    .transition().duration(400)
+    .attr('stroke-width', 1).attr('stroke-opacity', 0.18).attr('filter','none');
+  labelGroup.selectAll('.link-label').attr('opacity', 0);
+
+  document.getElementById('cypher-box').innerHTML = 'Waiting for query...';
+  document.getElementById('inspector').innerHTML = '<div style="font-size:10px;color:var(--text3);font-family:\'JetBrains Mono\',monospace;line-height:1.8">Hover over graph nodes<br/>to inspect entities.</div>';
+  document.getElementById('ms-retrieved').textContent = '—';
+  document.getElementById('hstat-queries').textContent = queryCount;
+  simulation.alpha(0.5).restart();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  API KEY MODAL
+// ═══════════════════════════════════════════════════════════
+function openApiModal() {
+  document.getElementById('modal-title').textContent = '⚙ API Configuration';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Anthropic API key to enable Claude-powered responses. Your key is stored only in localStorage and never sent anywhere except api.anthropic.com.</p>
+    <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">API KEY</label>
+    <input id="api-key-input" type="password" value="${API_KEY}" placeholder="sk-ant-..." style="width:100%;margin-top:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text0);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none"/>
+    <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.7">Get your key at <span style="color:var(--cyan)">console.anthropic.com</span></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn" onclick="closeModal()">CANCEL</button>
+    <button class="btn btn-primary" onclick="saveApiKey()">SAVE KEY</button>`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  API_KEY = val;
+  if (val) localStorage.setItem('graphrag_api_key', val);
+  else localStorage.removeItem('graphrag_api_key');
+  checkApiKey();
+  closeModal();
+  showToast(val ? '✓ API key saved' : 'API key cleared');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT CHAT
+// ═══════════════════════════════════════════════════════════
+function exportChat() {
+  const msgs = document.querySelectorAll('#chat-history .msg');
+  let txt = `GraphRAG System · Lab 11\nExported: ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
+  msgs.forEach(m => {
+    const role = m.classList.contains('msg-user') ? 'USER' : 'GRAPHRAG';
+    const body = m.querySelector('.msg-body')?.textContent || '';
+    txt += `[${role}]\n${body}\n\n`;
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+  a.download = 'graphrag-chat.txt';
+  a.click();
+  showToast('Chat exported!');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
