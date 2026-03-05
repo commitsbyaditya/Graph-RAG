@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GraphRAG System · Lab 11</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
@@ -966,6 +967,7 @@
       <div class="header-actions">
         <div id="status-dot"></div>
         <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌙 DARK</button>
+        <button class="btn" onclick="exportGraphPNG()" title="Save graph as image">📷 SNAPSHOT</button>
         <button class="btn" onclick="openApiModal()">⚙ API KEY</button>
         <button class="btn" onclick="exportChat()">↓ EXPORT</button>
         <button class="btn btn-primary" onclick="resetGraph()">↺ RESET</button>
@@ -2045,6 +2047,29 @@
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  GRAPH EXPORT AS PNG
+    // ═══════════════════════════════════════════════════════════
+    async function exportGraphPNG() {
+      showToast('📷 Capturing graph...');
+      try {
+        const canvas = await html2canvas(document.getElementById('canvas'), {
+          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg0').trim(),
+          scale: 2,
+          useCORS: true,
+          logging: false,
+        });
+        const link = document.createElement('a');
+        link.download = `graphrag-snapshot-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✓ Graph exported as PNG!');
+      } catch (err) {
+        showToast('Failed to export graph.');
+        console.error(err);
+      }
     }
   </script>
 </body>
