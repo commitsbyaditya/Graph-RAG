@@ -630,6 +630,56 @@
       }
     }
 
+    /* Typewriter Cursor */
+    .typewriter-cursor {
+      display: inline-block;
+      width: 6px;
+      height: 12px;
+      background-color: var(--cyan);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    .typewriter-cursor.done {
+      display: none;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* Copy Button */
+    .btn-copy {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 9px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .btn-copy:hover {
+      color: var(--cyan);
+      border-color: var(--cyan3);
+      background: #00e5ff11;
+    }
+
     /* Input area */
     #input-area {
       padding: 14px 16px;
@@ -1378,8 +1428,12 @@
       const retrieval = retrieveSubgraph(query);
       lastRetrieval = retrieval;
 
-      // Update cypher
-      document.getElementById('cypher-box').innerHTML = retrieval.cypher;
+      // Update cypher and add copy button
+      document.getElementById('cypher-box').innerHTML = `
+        <div id="cypher-content">${retrieval.cypher}</div>
+        <button class="btn-copy" onclick="copyText('cypher-content')" style="margin-top:12px;float:right;">📋 COPY CYPHER</button>
+        <div style="clear:both;"></div>
+      `;
 
       // Step 2: Traverse & highlight
       await sleep(200);
@@ -1441,7 +1495,10 @@
         }
         div.innerHTML = `<div class="msg-role"><span class="spinner" id="spin-${id}"></span> ⬡ GRAPHRAG</div>
       ${stepsHtml}
-      <div class="msg-body" id="body-${id}">${text}</div>`;
+      <div class="msg-body" id="body-${id}">${text}</div>
+      <div id="copy-container-${id}" style="display:none">
+        <button class="btn-copy" onclick="copyText('body-${id}')">📋 COPY ANSWER</button>
+      </div>`;
       }
 
       history.appendChild(div);
@@ -1461,15 +1518,25 @@
     function typewriterUpdate(msgId, text, meta) {
       const body = document.getElementById(`body-${msgId}`);
       const spin = document.getElementById(`spin-${msgId}`);
+      const copyContainer = document.getElementById(`copy-container-${msgId}`);
       if (spin) spin.style.display = 'none';
       if (!body) return;
-      body.textContent = '';
+
+      body.innerHTML = '<span class="tw-text"></span><span class="typewriter-cursor"></span>';
+      const textSpan = body.querySelector('.tw-text');
+      const cursor = body.querySelector('.typewriter-cursor');
+
       let i = 0;
+      // Faster typing speed (8ms instead of 15ms)
       const interval = setInterval(() => {
-        body.textContent = text.slice(0, ++i);
+        textSpan.textContent = text.slice(0, ++i);
         document.getElementById('chat-history').scrollTop = 99999;
+
         if (i >= text.length) {
           clearInterval(interval);
+          cursor.classList.add('done'); // hide cursor
+          if (copyContainer) copyContainer.style.display = 'block';
+
           if (meta) {
             const metaDiv = document.createElement('div');
             metaDiv.className = 'msg-meta';
@@ -1483,7 +1550,23 @@
             document.getElementById('chat-history').scrollTop = 99999;
           }
         }
-      }, 15);
+      }, 8);
+    }
+
+    async function copyText(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      let textToCopy = el.innerText || el.textContent;
+
+      // Remove trailing cursor if it accidentally gets grabbed
+      textToCopy = textToCopy.replace(/█$/, '');
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        showToast('✓ Copied to clipboard!');
+      } catch (err) {
+        showToast('Failed to copy text.');
+      }
     }
 
     function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -1576,6 +1659,25 @@
         }));
 
       const defs = svg.append('defs');
+
+      // Blueprint Grid Pattern
+      defs.append('pattern')
+        .attr('id', 'bg-grid')
+        .attr('width', 40)
+        .attr('height', 40)
+        .attr('patternUnits', 'userSpaceOnUse')
+        .append('path')
+        .attr('d', 'M 40 0 L 0 0 0 40')
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--border)')
+        .attr('stroke-width', 0.5)
+        .attr('opacity', 0.4);
+
+      svg.append('rect')
+        .attr('width', '100%')
+        .attr('height', '100%')
+        .attr('fill', 'url(#bg-grid)');
+
       defs.append('filter').attr('id', 'glow-node').html(`
     <feGaussianBlur stdDeviation="4" result="blur"/>
     <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`);
