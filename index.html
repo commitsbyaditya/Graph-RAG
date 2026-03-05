@@ -997,6 +997,91 @@
       color: var(--cyan);
       background: #00e5ff08;
     }
+
+    /* Analytics Styles */
+    .analytics-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .analytics-row:last-child {
+      border-bottom: none;
+    }
+
+    .analytics-label {
+      color: var(--text1);
+    }
+
+    .analytics-val {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .rank-item .rank-name {
+      color: var(--text0);
+    }
+
+    .rank-item .rank-score {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .degree-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 0;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .degree-bar-label {
+      width: 50px;
+      color: var(--text1);
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .degree-bar {
+      height: 10px;
+      border-radius: 2px;
+      background: var(--cyan);
+      min-width: 2px;
+      transition: width .5s;
+    }
+
+    .degree-bar-count {
+      color: var(--text2);
+      width: 20px;
+      flex-shrink: 0;
+    }
+
+    .path-node {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      margin: 2px;
+    }
+
+    .path-arrow {
+      color: var(--text2);
+      font-size: 10px;
+      margin: 0 2px;
+    }
   </style>
 </head>
 
@@ -1035,6 +1120,10 @@
       <div class="header-actions">
         <div id="status-dot"></div>
         <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">THEME</button>
+        <button class="btn" onclick="toggleAnalytics()">ANALYTICS</button>
+        <button class="btn" onclick="togglePathfinder()">PATHFINDER</button>
+        <button class="btn" onclick="toggleFullscreen()">FULLSCREEN</button>
+        <button class="btn" onclick="openSessionStats()">STATS</button>
         <button class="btn" onclick="exportGraphPNG()" title="Save graph as image">SNAPSHOT</button>
         <button class="btn" onclick="openApiModal()">API KEY</button>
         <button class="btn" onclick="exportChat()">EXPORT</button>
@@ -1113,9 +1202,55 @@
       <div class="canvas-pill" id="pill-tl">FORCE-DIRECTED · D3 v7</div>
       <div class="canvas-pill" id="pill-tr" id="pill-tr">KNOWLEDGE GRAPH</div>
       <div id="mini-stats">
-        <div class="mini-stat">Nodes: <span id="ms-nodes">—</span></div>
-        <div class="mini-stat">Edges: <span id="ms-edges">—</span></div>
-        <div class="mini-stat">Retrieved: <span id="ms-retrieved">—</span></div>
+        <div class="mini-stat">Nodes: <span id="ms-nodes">--</span></div>
+        <div class="mini-stat">Edges: <span id="ms-edges">--</span></div>
+        <div class="mini-stat">Retrieved: <span id="ms-retrieved">--</span></div>
+      </div>
+
+      <!-- Analytics Overlay -->
+      <div id="analytics-overlay" style="position:absolute;top:50px;right:14px;width:240px;z-index:5;display:none;">
+        <div
+          style="background:rgba(3,13,16,.92);border:1px solid var(--border2);border-radius:var(--r);padding:12px;backdrop-filter:blur(8px);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span
+              style="font-size:9px;letter-spacing:3px;color:var(--text3);font-family:'JetBrains Mono',monospace">GRAPH
+              ANALYTICS</span>
+            <button class="btn" style="padding:2px 6px;font-size:9px" onclick="toggleAnalytics()">X</button>
+          </div>
+          <div id="analytics-body">Loading...</div>
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+            <span
+              style="font-size:9px;letter-spacing:2px;color:var(--text3);font-family:'JetBrains Mono',monospace">PAGERANK
+              TOP 5</span>
+            <div id="pagerank-body" style="margin-top:6px">Computing...</div>
+          </div>
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+            <span
+              style="font-size:9px;letter-spacing:2px;color:var(--text3);font-family:'JetBrains Mono',monospace">DEGREE
+              DISTRIBUTION</span>
+            <div id="degree-chart" style="margin-top:6px">Computing...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pathfinder Overlay -->
+      <div id="pathfinder-overlay" style="position:absolute;bottom:50px;right:14px;width:260px;z-index:5;display:none;">
+        <div
+          style="background:rgba(3,13,16,.92);border:1px solid var(--border2);border-radius:var(--r);padding:12px;backdrop-filter:blur(8px);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span
+              style="font-size:9px;letter-spacing:3px;color:var(--text3);font-family:'JetBrains Mono',monospace">PATHFINDER</span>
+            <button class="btn" style="padding:2px 6px;font-size:9px" onclick="togglePathfinder()">X</button>
+          </div>
+          <select id="path-from"
+            style="width:100%;margin-bottom:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:6px 8px;color:var(--text0);font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;"></select>
+          <select id="path-to"
+            style="width:100%;margin-bottom:8px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:6px 8px;color:var(--text0);font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;"></select>
+          <button class="btn btn-primary" style="width:100%;padding:8px" onclick="findShortestPath()">FIND PATH</button>
+          <div id="path-result"
+            style="margin-top:10px;font-size:10px;color:var(--text1);font-family:'JetBrains Mono',monospace;line-height:1.8">
+          </div>
+        </div>
       </div>
     </main>
 
@@ -1579,7 +1714,7 @@
           max_tokens: 1000,
           messages: [
             { role: 'system', content: `You are a GraphRAG assistant. Answer ONLY using the knowledge graph context provided. Be precise, reference specific entity names and relationships. Highlight key connections. Format as 2-4 readable sentences. If the graph context doesn't contain enough info, say so clearly.` },
-            { role: 'user', content: `${ctx}\n\nQUESTION: ${query}` }
+            { role: 'user', content: getContextWithMemory(ctx, query) }
           ]
         })
       });
@@ -1608,8 +1743,11 @@
 
       setLoading(true);
       addMessage('user', query);
+      pushQueryState(query);
+      addToMemory('user', query);
 
       const msgId = 'msg-' + Date.now();
+      const startTime = Date.now();
       const aiMsg = addMessage('ai', '', msgId, null, ['EXTRACT', 'TRAVERSE', 'GENERATE']);
 
       // Step 1: Extract
@@ -1633,20 +1771,30 @@
       updateInspector(retrieval.ctxNodes, retrieval.ctxEdges);
       updateMiniStats(retrieval.visited.size);
 
+      // Compute confidence score
+      const confidence = computeConfidence(retrieval);
+      const tokenEstimate = estimateTokens(retrieval.ctx);
+
       // Step 3: Generate
       await sleep(400);
       updateSteps(msgId, 3);
 
       try {
         const answer = await askClaude(query, retrieval.ctx);
-        const elapsed = ((Date.now() - parseInt(msgId.split('-')[1])) / 1000).toFixed(1);
+        const latencyMs = Date.now() - startTime;
+        const elapsed = (latencyMs / 1000).toFixed(1);
         updateSteps(msgId, -1);
+        addToMemory('assistant', answer);
+        updatePerfMetrics(latencyMs, tokenEstimate);
+
         typewriterUpdate(msgId, answer, {
           nodes: retrieval.ctxNodes.length,
           edges: retrieval.ctxEdges.length,
           depth: traversalDepth,
           time: elapsed + 's',
           seeds: retrieval.seedIds.size,
+          confidence: confidence,
+          tokens: tokenEstimate,
         });
 
         // Save to query history
@@ -1658,7 +1806,7 @@
       } catch (err) {
         updateSteps(msgId, -1);
         const errMsg = err.message === 'NO_API_KEY'
-          ? 'Please set your API key via **⚙ API KEY**.'
+          ? 'Please set your API key via API KEY button.'
           : `API error: ${err.message}`;
         typewriterUpdate(msgId, 'Error: ' + errMsg, null);
       }
@@ -1740,8 +1888,20 @@
           <span>${meta.nodes} nodes</span>
           <span>${meta.edges} edges</span>
           <span>depth ${meta.depth}</span>
-          <span>${meta.time}</span>`;
+          <span>${meta.time}</span>
+          ${meta.confidence !== undefined ? `<span>conf: ${meta.confidence}%</span>` : ''}
+          ${meta.tokens !== undefined ? `<span>~${meta.tokens} tokens</span>` : ''}`;
             body.parentNode.appendChild(metaDiv);
+
+            // Add rating buttons
+            const ratingDiv = document.createElement('div');
+            ratingDiv.id = `rating-${msgId}`;
+            ratingDiv.style.cssText = 'margin-top:6px;display:flex;gap:6px;';
+            ratingDiv.innerHTML = `
+              <button class="btn" style="padding:3px 10px;font-size:10px" onclick="rateResponse('${msgId}','up')">GOOD</button>
+              <button class="btn" style="padding:3px 10px;font-size:10px" onclick="rateResponse('${msgId}','down')">BAD</button>
+            `;
+            body.parentNode.appendChild(ratingDiv);
             document.getElementById('chat-history').scrollTop = 99999;
           }
         }
@@ -2298,6 +2458,22 @@
         e.preventDefault();
         handleQuery();
       }
+      // Ctrl+Z = Undo query
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (document.activeElement === document.getElementById('query-input')) return;
+        e.preventDefault();
+        undoQuery();
+      }
+      // Ctrl+Shift+Z = Redo query
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
+        e.preventDefault();
+        redoQuery();
+      }
+      // F11 = Fullscreen
+      if (e.key === 'F11') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
     });
 
     function openShortcutsModal() {
@@ -2322,6 +2498,338 @@
       </div>`;
       document.getElementById('modal-footer').innerHTML = `
       <button class="btn btn-primary" onclick="closeModal()">GOT IT</button>`;
+      document.getElementById('modal').classList.add('open');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  GRAPH ANALYTICS (Feature 1)
+    // ═══════════════════════════════════════════════════════════
+    function toggleAnalytics() {
+      const el = document.getElementById('analytics-overlay');
+      const visible = el.style.display !== 'none';
+      el.style.display = visible ? 'none' : 'block';
+      if (!visible) computeAnalytics();
+    }
+
+    function computeAnalytics() {
+      const N = GRAPH_DATA.nodes.length;
+      const E = GRAPH_DATA.edges.length;
+      const maxEdges = N * (N - 1) / 2;
+      const density = maxEdges > 0 ? (E / maxEdges).toFixed(4) : 0;
+
+      // Degree map
+      const degMap = {};
+      GRAPH_DATA.nodes.forEach(n => degMap[n.id] = 0);
+      GRAPH_DATA.edges.forEach(e => { degMap[e.s] = (degMap[e.s] || 0) + 1; degMap[e.t] = (degMap[e.t] || 0) + 1; });
+      const degrees = Object.values(degMap);
+      const avgDeg = (degrees.reduce((a, b) => a + b, 0) / N).toFixed(2);
+      const maxDeg = Math.max(...degrees);
+      const minDeg = Math.min(...degrees);
+
+      // Connected components
+      const components = findConnectedComponents();
+
+      document.getElementById('analytics-body').innerHTML = `
+        <div class="analytics-row"><span class="analytics-label">Nodes</span><span class="analytics-val">${N}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Edges</span><span class="analytics-val">${E}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Density</span><span class="analytics-val">${density}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Avg Degree</span><span class="analytics-val">${avgDeg}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Max Degree</span><span class="analytics-val">${maxDeg}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Min Degree</span><span class="analytics-val">${minDeg}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Components</span><span class="analytics-val">${components.length}</span></div>
+      `;
+
+      computePageRank();
+      renderDegreeChart(degMap);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PAGERANK (Feature 2)
+    // ═══════════════════════════════════════════════════════════
+    function computePageRank() {
+      const d = 0.85, iterations = 20;
+      const N = GRAPH_DATA.nodes.length;
+      const pr = {};
+      const outDeg = {};
+      GRAPH_DATA.nodes.forEach(n => { pr[n.id] = 1 / N; outDeg[n.id] = 0; });
+      GRAPH_DATA.edges.forEach(e => { outDeg[e.s] = (outDeg[e.s] || 0) + 1; });
+
+      // Build adjacency (incoming)
+      const incoming = {};
+      GRAPH_DATA.nodes.forEach(n => incoming[n.id] = []);
+      GRAPH_DATA.edges.forEach(e => { incoming[e.t].push(e.s); });
+
+      for (let i = 0; i < iterations; i++) {
+        const newPr = {};
+        GRAPH_DATA.nodes.forEach(n => {
+          let sum = 0;
+          incoming[n.id].forEach(src => { sum += pr[src] / (outDeg[src] || 1); });
+          newPr[n.id] = (1 - d) / N + d * sum;
+        });
+        Object.assign(pr, newPr);
+      }
+
+      const sorted = Object.entries(pr).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const maxVal = sorted[0][1];
+      document.getElementById('pagerank-body').innerHTML = sorted.map(([id, score]) => {
+        const node = nodeMap[id];
+        const cfg = TYPE_CFG[node?.type] || { fill: 'var(--cyan)' };
+        const pct = ((score / maxVal) * 100).toFixed(0);
+        return `<div class="rank-item"><span class="rank-name" style="color:${cfg.fill}">${node?.label || id}</span><span class="rank-score">${(score * 100).toFixed(2)}</span></div>`;
+      }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  COMMUNITY DETECTION (Feature 3)
+    // ═══════════════════════════════════════════════════════════
+    function findConnectedComponents() {
+      const visited = new Set();
+      const components = [];
+      const adj = {};
+      GRAPH_DATA.nodes.forEach(n => adj[n.id] = []);
+      GRAPH_DATA.edges.forEach(e => { adj[e.s].push(e.t); adj[e.t].push(e.s); });
+
+      GRAPH_DATA.nodes.forEach(n => {
+        if (visited.has(n.id)) return;
+        const component = [];
+        const queue = [n.id];
+        while (queue.length) {
+          const curr = queue.shift();
+          if (visited.has(curr)) continue;
+          visited.add(curr);
+          component.push(curr);
+          (adj[curr] || []).forEach(nb => { if (!visited.has(nb)) queue.push(nb); });
+        }
+        components.push(component);
+      });
+      return components;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SHORTEST PATH (Feature 4)
+    // ═══════════════════════════════════════════════════════════
+    function togglePathfinder() {
+      const el = document.getElementById('pathfinder-overlay');
+      const visible = el.style.display !== 'none';
+      el.style.display = visible ? 'none' : 'block';
+      if (!visible) populatePathSelectors();
+    }
+
+    function populatePathSelectors() {
+      const fromSelect = document.getElementById('path-from');
+      const toSelect = document.getElementById('path-to');
+      const options = GRAPH_DATA.nodes.map(n =>
+        `<option value="${n.id}">${n.label} (${n.type})</option>`
+      ).join('');
+      fromSelect.innerHTML = '<option value="" disabled selected>-- Source --</option>' + options;
+      toSelect.innerHTML = '<option value="" disabled selected>-- Target --</option>' + options;
+    }
+
+    function findShortestPath() {
+      const fromId = document.getElementById('path-from').value;
+      const toId = document.getElementById('path-to').value;
+      const resultDiv = document.getElementById('path-result');
+
+      if (!fromId || !toId) { resultDiv.innerHTML = 'Select both source and target.'; return; }
+      if (fromId === toId) { resultDiv.innerHTML = 'Source and target must differ.'; return; }
+
+      // BFS
+      const adj = {};
+      GRAPH_DATA.nodes.forEach(n => adj[n.id] = []);
+      GRAPH_DATA.edges.forEach(e => {
+        adj[e.s].push({ to: e.t, rel: e.r });
+        adj[e.t].push({ to: e.s, rel: e.r });
+      });
+
+      const visited = new Set([fromId]);
+      const queue = [[fromId]];
+      const relPath = {};
+
+      while (queue.length) {
+        const path = queue.shift();
+        const curr = path[path.length - 1];
+        if (curr === toId) {
+          // Render path
+          const pathNodes = new Set(path);
+          const pathEdges = new Set();
+          GRAPH_DATA.edges.forEach((e, i) => {
+            for (let j = 0; j < path.length - 1; j++) {
+              if ((e.s === path[j] && e.t === path[j + 1]) || (e.t === path[j] && e.s === path[j + 1])) pathEdges.add(i);
+            }
+          });
+          setHighlight(pathNodes, pathEdges);
+          spawnParticles(pathNodes, pathEdges);
+
+          resultDiv.innerHTML = `<div style="color:var(--green);margin-bottom:4px">Path found (${path.length - 1} hops):</div>` +
+            path.map(id => {
+              const n = nodeMap[id]; const cfg = TYPE_CFG[n?.type] || { fill: 'var(--cyan)' };
+              return `<span class="path-node" style="background:${cfg.fill}22;color:${cfg.fill};border:1px solid ${cfg.fill}">${n?.label || id}</span>`;
+            }).join('<span class="path-arrow"> &rarr; </span>');
+          return;
+        }
+        (adj[curr] || []).forEach(nb => {
+          if (!visited.has(nb.to)) {
+            visited.add(nb.to);
+            queue.push([...path, nb.to]);
+          }
+        });
+      }
+      resultDiv.innerHTML = '<span style="color:var(--red)">No path found between these nodes.</span>';
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  DEGREE DISTRIBUTION (Feature 5)
+    // ═══════════════════════════════════════════════════════════
+    function renderDegreeChart(degMap) {
+      const freq = {};
+      Object.values(degMap).forEach(d => freq[d] = (freq[d] || 0) + 1);
+      const sorted = Object.entries(freq).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+      const maxCount = Math.max(...sorted.map(s => s[1]));
+
+      document.getElementById('degree-chart').innerHTML = sorted.map(([deg, count]) => {
+        const barW = Math.max(2, (count / maxCount) * 120);
+        return `<div class="degree-bar-row">
+          <span class="degree-bar-label">${deg}</span>
+          <div class="degree-bar" style="width:${barW}px"></div>
+          <span class="degree-bar-count">${count}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  FULLSCREEN MODE (Feature 7)
+    // ═══════════════════════════════════════════════════════════
+    function toggleFullscreen() {
+      const canvas = document.getElementById('canvas');
+      if (!document.fullscreenElement) {
+        canvas.requestFullscreen().catch(err => showToast('Fullscreen not supported'));
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  CONTEXT WINDOW METER (Feature 12)
+    // ═══════════════════════════════════════════════════════════
+    function estimateTokens(text) {
+      return Math.ceil(text.length / 4); // rough estimate
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  RESPONSE CONFIDENCE (Feature 13)
+    // ═══════════════════════════════════════════════════════════
+    function computeConfidence(retrieval) {
+      const totalNodes = GRAPH_DATA.nodes.length;
+      const coverage = retrieval.visited.size / totalNodes;
+      const seedRatio = retrieval.seedIds.size / Math.max(1, retrieval.visited.size);
+      const score = Math.min(100, Math.round((coverage * 50 + seedRatio * 50)));
+      return score;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  MULTI-TURN MEMORY (Feature 14)
+    // ═══════════════════════════════════════════════════════════
+    let conversationMemory = [];
+
+    function addToMemory(role, content) {
+      conversationMemory.push({ role, content: content.slice(0, 300) });
+      if (conversationMemory.length > 10) conversationMemory = conversationMemory.slice(-10);
+    }
+
+    function getContextWithMemory(ctx, query) {
+      let memCtx = '';
+      if (conversationMemory.length > 0) {
+        memCtx = '\n\n=== CONVERSATION HISTORY ===\n';
+        conversationMemory.forEach(m => {
+          memCtx += `[${m.role.toUpperCase()}]: ${m.content}\n`;
+        });
+      }
+      return ctx + memCtx + '\n\nQUESTION: ' + query;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  RESPONSE RATING (Feature 15)
+    // ═══════════════════════════════════════════════════════════
+    let ratingStats = JSON.parse(localStorage.getItem('graphrag_ratings') || '{"up":0,"down":0}');
+
+    function rateResponse(msgId, rating) {
+      ratingStats[rating]++;
+      localStorage.setItem('graphrag_ratings', JSON.stringify(ratingStats));
+      const el = document.getElementById(`rating-${msgId}`);
+      if (el) el.innerHTML = `<span style="color:var(--green)">Rated ${rating === 'up' ? 'positive' : 'negative'}</span> (${ratingStats.up} up / ${ratingStats.down} down)`;
+      showToast('Rating recorded');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  UNDO/REDO (Feature 16)
+    // ═══════════════════════════════════════════════════════════
+    let queryStack = [];
+    let queryRedoStack = [];
+
+    function pushQueryState(query) {
+      queryStack.push(query);
+      queryRedoStack = [];
+    }
+
+    function undoQuery() {
+      if (queryStack.length < 2) { showToast('Nothing to undo'); return; }
+      queryRedoStack.push(queryStack.pop());
+      const prevQuery = queryStack[queryStack.length - 1];
+      document.getElementById('query-input').value = prevQuery;
+      showToast('Undo: ' + prevQuery.slice(0, 30));
+    }
+
+    function redoQuery() {
+      if (queryRedoStack.length === 0) { showToast('Nothing to redo'); return; }
+      const nextQuery = queryRedoStack.pop();
+      queryStack.push(nextQuery);
+      document.getElementById('query-input').value = nextQuery;
+      showToast('Redo: ' + nextQuery.slice(0, 30));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PERFORMANCE METRICS (Feature 17)
+    // ═══════════════════════════════════════════════════════════
+    let perfMetrics = { totalQueries: 0, totalLatency: 0, avgLatency: 0, totalTokensEstimated: 0 };
+
+    function updatePerfMetrics(latencyMs, tokensEstimated) {
+      perfMetrics.totalQueries++;
+      perfMetrics.totalLatency += latencyMs;
+      perfMetrics.avgLatency = Math.round(perfMetrics.totalLatency / perfMetrics.totalQueries);
+      perfMetrics.totalTokensEstimated += tokensEstimated;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  GRAPH JSON IMPORT/EXPORT (Feature 19)
+    // ═══════════════════════════════════════════════════════════
+    function exportGraphJSON() {
+      const data = JSON.stringify(GRAPH_DATA, null, 2);
+      const a = document.createElement('a');
+      a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+      a.download = 'graphrag-data.json';
+      a.click();
+      showToast('Graph data exported as JSON');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SESSION STATS (Feature 20)
+    // ═══════════════════════════════════════════════════════════
+    function openSessionStats() {
+      document.getElementById('modal-title').textContent = 'Session Statistics';
+      document.getElementById('modal-body').innerHTML = `
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text1);line-height:2.4">
+        <div class="analytics-row"><span class="analytics-label">Total Queries</span><span class="analytics-val">${perfMetrics.totalQueries}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Avg Latency</span><span class="analytics-val">${perfMetrics.avgLatency}ms</span></div>
+        <div class="analytics-row"><span class="analytics-label">Est. Tokens Used</span><span class="analytics-val">${perfMetrics.totalTokensEstimated}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Positive Ratings</span><span class="analytics-val">${ratingStats.up}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Negative Ratings</span><span class="analytics-val">${ratingStats.down}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Theme</span><span class="analytics-val">${document.documentElement.getAttribute('data-theme') || 'dark'}</span></div>
+        <div class="analytics-row"><span class="analytics-label">Model</span><span class="analytics-val">${selectedModel.split('-').slice(0, 2).join(' ')}</span></div>
+        <div class="analytics-row"><span class="analytics-label">History Items</span><span class="analytics-val">${getQueryHistory().length}</span></div>
+      </div>`;
+      document.getElementById('modal-footer').innerHTML = `
+      <button class="btn" onclick="exportGraphJSON()">EXPORT GRAPH</button>
+      <button class="btn btn-primary" onclick="closeModal()">CLOSE</button>`;
       document.getElementById('modal').classList.add('open');
     }
   </script>
