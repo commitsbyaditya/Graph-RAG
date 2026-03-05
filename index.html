@@ -45,6 +45,31 @@
       --glow-green: 0 0 20px #00ff9d33, 0 0 40px #00ff9d11;
     }
 
+    [data-theme="light"] {
+      --bg0: #f0f4f8;
+      --bg1: #ffffff;
+      --bg2: #e8eef3;
+      --bg3: #dce4eb;
+      --border: #c0d0da;
+      --border2: #a8bcc8;
+      --text0: #1a2a36;
+      --text1: #3a5a6a;
+      --text2: #6a8a9a;
+      --text3: #9ab0bc;
+      --cyan: #0099cc;
+      --cyan2: #007aa3;
+      --cyan3: #005c7a;
+      --green: #00b36b;
+      --green2: #009959;
+      --violet: #7c4dff;
+      --orange: #e05a2d;
+      --yellow: #cc9e00;
+      --red: #e03040;
+      --pink: #d84080;
+      --glow-cyan: 0 0 12px #0099cc33, 0 0 24px #0099cc11;
+      --glow-green: 0 0 12px #00b36b33, 0 0 24px #00b36b11;
+    }
+
     html,
     body {
       width: 100%;
@@ -940,6 +965,7 @@
       </div>
       <div class="header-actions">
         <div id="status-dot"></div>
+        <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌙 DARK</button>
         <button class="btn" onclick="openApiModal()">⚙ API KEY</button>
         <button class="btn" onclick="exportChat()">↓ EXPORT</button>
         <button class="btn btn-primary" onclick="resetGraph()">↺ RESET</button>
@@ -1181,6 +1207,7 @@
     //  INIT
     // ═══════════════════════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', async () => {
+      loadTheme();
       await tryLoadBackendKey(); // Fetch from .env over local server
       updateHeaderStats();
       buildFilterGrid();
@@ -1210,6 +1237,31 @@
 
     function checkApiKey() {
       document.getElementById('api-warning').classList.toggle('show', !API_KEY);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  THEME TOGGLE
+    // ═══════════════════════════════════════════════════════════
+    function loadTheme() {
+      const saved = localStorage.getItem('graphrag_theme') || 'dark';
+      applyTheme(saved);
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem('graphrag_theme', next);
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      const btn = document.getElementById('theme-toggle');
+      if (btn) btn.textContent = theme === 'dark' ? '🌙 DARK' : '☀️ LIGHT';
     }
 
     function updateHeaderStats() {
