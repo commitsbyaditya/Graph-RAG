@@ -1312,14 +1312,19 @@
     // ═══════════════════════════════════════════════════════════
     async function askClaude(query, ctx) {
       if (!API_KEY) throw new Error('NO_API_KEY');
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'llama-3.3-70b-versatile',
           max_tokens: 1000,
-          system: `You are a GraphRAG assistant. Answer ONLY using the knowledge graph context provided. Be precise, reference specific entity names and relationships. Highlight key connections. Format as 2-4 readable sentences. If the graph context doesn't contain enough info, say so clearly.`,
-          messages: [{ role: 'user', content: `${ctx}\n\nQUESTION: ${query}` }]
+          messages: [
+            { role: 'system', content: `You are a GraphRAG assistant. Answer ONLY using the knowledge graph context provided. Be precise, reference specific entity names and relationships. Highlight key connections. Format as 2-4 readable sentences. If the graph context doesn't contain enough info, say so clearly.` },
+            { role: 'user', content: `${ctx}\n\nQUESTION: ${query}` }
+          ]
         })
       });
       if (!resp.ok) {
@@ -1327,7 +1332,7 @@
         throw new Error(err.error?.message || `HTTP ${resp.status}`);
       }
       const data = await resp.json();
-      return data.content?.[0]?.text || 'No response.';
+      return data.choices?.[0]?.message?.content || 'No response.';
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1822,10 +1827,10 @@
     function openApiModal() {
       document.getElementById('modal-title').textContent = '⚙ API Configuration';
       document.getElementById('modal-body').innerHTML = `
-    <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Anthropic API key to enable Claude-powered responses. Your key is stored only in localStorage and never sent anywhere except api.anthropic.com.</p>
-    <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">API KEY</label>
-    <input id="api-key-input" type="password" value="${API_KEY}" placeholder="sk-ant-..." style="width:100%;margin-top:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text0);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none"/>
-    <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.7">Get your key at <span style="color:var(--cyan)">console.anthropic.com</span></div>`;
+    <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Groq API key to enable fast responses via Llama 3 70B. Your key is stored only in localStorage and never sent anywhere except api.groq.com.</p>
+    <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
+    <input id="api-key-input" type="password" value="${API_KEY}" placeholder="gsk_..." style="width:100%;margin-top:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text0);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none"/>
+    <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.7">Get your key at <span style="color:var(--cyan)">console.groq.com</span></div>`;
       document.getElementById('modal-footer').innerHTML = `
     <button class="btn" onclick="closeModal()">CANCEL</button>
     <button class="btn btn-primary" onclick="saveApiKey()">SAVE KEY</button>`;
