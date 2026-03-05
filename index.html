@@ -978,6 +978,17 @@
     <aside id="sidebar">
 
       <div class="section">
+        <div class="section-header"><span class="section-title">🔍 NODE SEARCH</span></div>
+        <div class="section-body">
+          <input id="node-search" type="text" placeholder="Search nodes..."
+            style="width:100%;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text0);font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;"
+            oninput="liveSearchNodes(this.value)" />
+          <div id="search-results"
+            style="margin-top:8px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;"></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="section-header"><span class="section-title">NODE FILTERS</span></div>
         <div class="section-body">
           <div class="filter-grid" id="filter-grid"></div>
@@ -1264,6 +1275,46 @@
       }
       const btn = document.getElementById('theme-toggle');
       if (btn) btn.textContent = theme === 'dark' ? '🌙 DARK' : '☀️ LIGHT';
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  NODE SEARCH
+    // ═══════════════════════════════════════════════════════════
+    function liveSearchNodes(query) {
+      const q = query.trim().toLowerCase();
+      const resultsDiv = document.getElementById('search-results');
+
+      if (!q) {
+        resultsDiv.innerHTML = '';
+        // Reset all nodes to full visibility
+        if (nodeGroup) {
+          nodeGroup.selectAll('.node circle').transition().duration(200).attr('opacity', 0.85);
+          nodeGroup.selectAll('.node text.node-label').transition().duration(200).attr('opacity', 1);
+        }
+        return;
+      }
+
+      const matches = GRAPH_DATA.nodes.filter(n =>
+        n.label.toLowerCase().includes(q) ||
+        n.type.toLowerCase().includes(q) ||
+        n.desc.toLowerCase().includes(q) ||
+        (n.skills && n.skills.some(s => s.toLowerCase().includes(q)))
+      );
+      const matchIds = new Set(matches.map(n => n.id));
+
+      resultsDiv.innerHTML = matches.length
+        ? `<span style="color:var(--cyan)">${matches.length}</span> node${matches.length !== 1 ? 's' : ''} found`
+        : `<span style="color:var(--red)">No matches</span>`;
+
+      // Highlight matching nodes, dim others
+      if (nodeGroup) {
+        nodeGroup.selectAll('.node circle')
+          .transition().duration(200)
+          .attr('opacity', d => matchIds.has(d.id) ? 1 : 0.12);
+        nodeGroup.selectAll('.node text.node-label')
+          .transition().duration(200)
+          .attr('opacity', d => matchIds.has(d.id) ? 1 : 0.1);
+      }
     }
 
     function updateHeaderStats() {
