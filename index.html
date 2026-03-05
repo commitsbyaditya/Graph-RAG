@@ -1205,6 +1205,12 @@
     //  STATE
     // ═══════════════════════════════════════════════════════════
     let API_KEY = localStorage.getItem('graphrag_api_key') || '';
+    let selectedModel = localStorage.getItem('graphrag_model') || 'llama-3.3-70b-versatile';
+    const AVAILABLE_MODELS = [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Fastest)' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Balanced)' },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B (Compact)' },
+    ];
     let traversalDepth = 2;
     let queryCount = 0;
     let totalNodesRetrieved = 0;
@@ -1490,7 +1496,7 @@
           'Authorization': `Bearer ${API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: selectedModel,
           max_tokens: 1000,
           messages: [
             { role: 'system', content: `You are a GraphRAG assistant. Answer ONLY using the knowledge graph context provided. Be precise, reference specific entity names and relationships. Highlight key connections. Format as 2-4 readable sentences. If the graph context doesn't contain enough info, say so clearly.` },
@@ -2048,26 +2054,40 @@
     //  API KEY MODAL
     // ═══════════════════════════════════════════════════════════
     function openApiModal() {
+      const modelOptions = AVAILABLE_MODELS.map(m =>
+        `<option value="${m.id}" ${m.id === selectedModel ? 'selected' : ''}>${m.name}</option>`
+      ).join('');
+
       document.getElementById('modal-title').textContent = '⚙ API Configuration';
       document.getElementById('modal-body').innerHTML = `
-    <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Groq API key to enable fast responses via Llama 3 70B. Your key is stored only in localStorage and never sent anywhere except api.groq.com.</p>
+    <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Groq API key to enable fast responses. Your key is stored only in localStorage and never sent anywhere except api.groq.com.</p>
     <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
     <input id="api-key-input" type="password" value="${API_KEY}" placeholder="gsk_..." style="width:100%;margin-top:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text0);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none"/>
-    <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.7">Get your key at <span style="color:var(--cyan)">console.groq.com</span></div>`;
+    <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.7">Get your key at <span style="color:var(--cyan)">console.groq.com</span></div>
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+      <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">AI MODEL</label>
+      <select id="model-select" style="width:100%;margin-top:6px;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;color:var(--text0);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;cursor:pointer">
+        ${modelOptions}
+      </select>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3);line-height:1.7">Choose the LLM model for generating answers from graph context.</div>
+    </div>`;
       document.getElementById('modal-footer').innerHTML = `
     <button class="btn" onclick="closeModal()">CANCEL</button>
-    <button class="btn btn-primary" onclick="saveApiKey()">SAVE KEY</button>`;
+    <button class="btn btn-primary" onclick="saveApiKey()">SAVE CONFIG</button>`;
       document.getElementById('modal').classList.add('open');
     }
 
     function saveApiKey() {
       const val = document.getElementById('api-key-input').value.trim();
+      const modelVal = document.getElementById('model-select')?.value || selectedModel;
       API_KEY = val;
+      selectedModel = modelVal;
       if (val) localStorage.setItem('graphrag_api_key', val);
       else localStorage.removeItem('graphrag_api_key');
+      localStorage.setItem('graphrag_model', modelVal);
       checkApiKey();
       closeModal();
-      showToast(val ? '✓ API key saved' : 'API key cleared');
+      showToast(val ? `✓ Config saved · ${AVAILABLE_MODELS.find(m => m.id === modelVal)?.name || modelVal}` : 'API key cleared');
     }
 
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
