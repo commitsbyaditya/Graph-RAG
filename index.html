@@ -30,8 +30,8 @@
       --border2: #123545;
       --text0: #e8f5f8;
       --text1: #8bb8c4;
-      --text2: #3a6070;
-      --text3: #1e3d4a;
+      --text2: #5a8a9a;
+      --text3: #3a6a7a;
       --cyan: #00e5ff;
       --cyan2: #00b4cc;
       --cyan3: #007b8a;
@@ -56,8 +56,8 @@
       --border2: #a8bcc8;
       --text0: #1a2a36;
       --text1: #3a5a6a;
-      --text2: #6a8a9a;
-      --text3: #9ab0bc;
+      --text2: #4a6a7a;
+      --text3: #6a8a98;
       --cyan: #0099cc;
       --cyan2: #007aa3;
       --cyan3: #005c7a;
@@ -981,8 +981,8 @@
       padding: 6px 8px;
       border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 10px;
-      color: var(--text2);
+      font-size: 11px;
+      color: var(--text1);
       cursor: pointer;
       font-family: 'JetBrains Mono', monospace;
       transition: all .15s;
@@ -1007,7 +1007,7 @@
     <!-- ── HEADER ─────────────────────────────────────────── -->
     <header id="header">
       <div class="logo">
-        <div class="logo-icon">⬡</div>
+        <div class="logo-icon">G</div>
         <div>
           <div class="logo-text">GRAPH<span>RAG</span> <span style="color:var(--text3);font-size:11px">SYSTEM</span>
           </div>
@@ -1034,11 +1034,11 @@
       </div>
       <div class="header-actions">
         <div id="status-dot"></div>
-        <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌙 DARK</button>
-        <button class="btn" onclick="exportGraphPNG()" title="Save graph as image">📷 SNAPSHOT</button>
-        <button class="btn" onclick="openApiModal()">⚙ API KEY</button>
-        <button class="btn" onclick="exportChat()">↓ EXPORT</button>
-        <button class="btn btn-primary" onclick="resetGraph()">↺ RESET</button>
+        <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">THEME</button>
+        <button class="btn" onclick="exportGraphPNG()" title="Save graph as image">SNAPSHOT</button>
+        <button class="btn" onclick="openApiModal()">API KEY</button>
+        <button class="btn" onclick="exportChat()">EXPORT</button>
+        <button class="btn btn-primary" onclick="resetGraph()">RESET</button>
       </div>
     </header>
 
@@ -1046,7 +1046,7 @@
     <aside id="sidebar">
 
       <div class="section">
-        <div class="section-header"><span class="section-title">🔍 NODE SEARCH</span></div>
+        <div class="section-header"><span class="section-title">NODE SEARCH</span></div>
         <div class="section-body">
           <input id="node-search" type="text" placeholder="Search nodes..."
             style="width:100%;background:var(--bg0);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;color:var(--text0);font-size:11px;font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;"
@@ -1096,7 +1096,7 @@
 
       <div class="section" style="max-height:180px;overflow:hidden;display:flex;flex-direction:column">
         <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
-          <span class="section-title">📜 QUERY HISTORY</span>
+          <span class="section-title">QUERY HISTORY</span>
           <button class="btn" style="padding:2px 6px;font-size:9px" onclick="clearHistory()">CLEAR</button>
         </div>
         <div id="query-history" style="padding:6px 14px 10px;overflow-y:auto;flex:1">
@@ -1359,7 +1359,7 @@
         document.documentElement.removeAttribute('data-theme');
       }
       const btn = document.getElementById('theme-toggle');
-      if (btn) btn.textContent = theme === 'dark' ? '🌙 DARK' : '☀️ LIGHT';
+      if (btn) btn.textContent = theme === 'dark' ? 'DARK' : 'LIGHT';
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1602,7 +1602,7 @@
 
       if (!API_KEY) {
         addMessage('user', query);
-        addMessage('ai', '⚠️ Please configure your API key first — click **⚙ API KEY** in the header.', null, null, []);
+        addMessage('ai', 'Please configure your API key first -- click API KEY in the header.', null, null, []);
         return;
       }
 
@@ -1621,7 +1621,7 @@
       // Update cypher and add copy button
       document.getElementById('cypher-box').innerHTML = `
         <div id="cypher-content">${retrieval.cypher}</div>
-        <button class="btn-copy" onclick="copyText('cypher-content')" style="margin-top:12px;float:right;">📋 COPY CYPHER</button>
+        <button class="btn-copy" onclick="copyText('cypher-content')" style="margin-top:12px;float:right;">COPY CYPHER</button>
         <div style="clear:both;"></div>
       `;
 
@@ -1660,7 +1660,7 @@
         const errMsg = err.message === 'NO_API_KEY'
           ? 'Please set your API key via **⚙ API KEY**.'
           : `API error: ${err.message}`;
-        typewriterUpdate(msgId, '⚠️ ' + errMsg, null);
+        typewriterUpdate(msgId, 'Error: ' + errMsg, null);
       }
 
       setLoading(false);
@@ -1686,11 +1686,11 @@
         ${steps.map((s, i) => `<span class="pipe-step pending" id="step-${id}-${i}">${s}</span>`).join('')}
       </div>`;
         }
-        div.innerHTML = `<div class="msg-role"><span class="spinner" id="spin-${id}"></span> ⬡ GRAPHRAG</div>
+        div.innerHTML = `<div class="msg-role"><span class="spinner" id="spin-${id}"></span> GRAPHRAG</div>
       ${stepsHtml}
       <div class="msg-body" id="body-${id}">${text}</div>
       <div id="copy-container-${id}" style="display:none">
-        <button class="btn-copy" onclick="copyText('body-${id}')">📋 COPY ANSWER</button>
+        <button class="btn-copy" onclick="copyText('body-${id}')">COPY ANSWER</button>
       </div>`;
       }
 
@@ -1736,11 +1736,11 @@
             const metaDiv = document.createElement('div');
             metaDiv.className = 'msg-meta';
             metaDiv.innerHTML = `
-          <span>🔵 ${meta.seeds} seeds</span>
-          <span>⬡ ${meta.nodes} nodes</span>
-          <span>— ${meta.edges} edges</span>
-          <span>↕ depth ${meta.depth}</span>
-          <span>⏱ ${meta.time}</span>`;
+          <span>${meta.seeds} seeds</span>
+          <span>${meta.nodes} nodes</span>
+          <span>${meta.edges} edges</span>
+          <span>depth ${meta.depth}</span>
+          <span>${meta.time}</span>`;
             body.parentNode.appendChild(metaDiv);
             document.getElementById('chat-history').scrollTop = 99999;
           }
@@ -1758,7 +1758,7 @@
 
       try {
         await navigator.clipboard.writeText(textToCopy);
-        showToast('✓ Copied to clipboard!');
+        showToast('Copied to clipboard');
       } catch (err) {
         showToast('Failed to copy text.');
       }
@@ -1805,7 +1805,7 @@
     function clearHistory() {
       localStorage.removeItem('graphrag_history');
       renderQueryHistory();
-      showToast('✓ History cleared');
+      showToast('History cleared');
     }
 
     function setLoading(v) {
@@ -2184,7 +2184,7 @@
         `<option value="${m.id}" ${m.id === selectedModel ? 'selected' : ''}>${m.name}</option>`
       ).join('');
 
-      document.getElementById('modal-title').textContent = '⚙ API Configuration';
+      document.getElementById('modal-title').textContent = 'API Configuration';
       document.getElementById('modal-body').innerHTML = `
     <p style="font-size:12px;color:var(--text1);margin-bottom:16px;line-height:1.7">Enter your Groq API key to enable fast responses. Your key is stored only in localStorage and never sent anywhere except api.groq.com.</p>
     <label style="font-size:10px;color:var(--text3);letter-spacing:2px;font-family:'JetBrains Mono',monospace">GROQ API KEY</label>
@@ -2213,7 +2213,7 @@
       localStorage.setItem('graphrag_model', modelVal);
       checkApiKey();
       closeModal();
-      showToast(val ? `✓ Config saved · ${AVAILABLE_MODELS.find(m => m.id === modelVal)?.name || modelVal}` : 'API key cleared');
+      showToast(val ? `Config saved -- ${AVAILABLE_MODELS.find(m => m.id === modelVal)?.name || modelVal}` : 'API key cleared');
     }
 
     function closeModal() { document.getElementById('modal').classList.remove('open'); }
@@ -2250,7 +2250,7 @@
     //  GRAPH EXPORT AS PNG
     // ═══════════════════════════════════════════════════════════
     async function exportGraphPNG() {
-      showToast('📷 Capturing graph...');
+      showToast('Capturing graph...');
       try {
         const canvas = await html2canvas(document.getElementById('canvas'), {
           backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg0').trim(),
@@ -2262,7 +2262,7 @@
         link.download = `graphrag-snapshot-${Date.now()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-        showToast('✓ Graph exported as PNG!');
+        showToast('Graph exported as PNG');
       } catch (err) {
         showToast('Failed to export graph.');
         console.error(err);
@@ -2301,7 +2301,7 @@
     });
 
     function openShortcutsModal() {
-      document.getElementById('modal-title').textContent = '⌨ Keyboard Shortcuts';
+      document.getElementById('modal-title').textContent = 'Keyboard Shortcuts';
       document.getElementById('modal-body').innerHTML = `
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text1);line-height:2.4">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
