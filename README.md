@@ -1,170 +1,159 @@
-# GraphRAG System - Lab 11
+# GraphRAG System
 
-> **Knowledge Graph * Retrieval Augmented Generation**  
-> A production-quality, self-contained Graph RAG demo powered by Claude.
+> A Knowledge Graph-Powered Retrieval-Augmented Generation system with interactive D3.js visualization, multi-model LLM support, and a real-time graph traversal engine.
 
----
+## Overview
 
-## Quick Start
+GraphRAG combines the structured reasoning power of **knowledge graphs** with the natural language capabilities of **large language models**. Unlike traditional RAG (which retrieves flat text chunks), GraphRAG traverses entity relationships to provide contextually rich, accurate answers.
 
-1. Open `index.html` in any modern browser (Chrome/Firefox/Edge)
-2. Click **⚙ API KEY** in the top-right header
-3. Paste your Anthropic API key (`sk-ant-...`)
-4. Type a question or click a sample query
-5. Watch the graph light up as retrieval traverses the knowledge graph!
-
-> **No install required.** Pure HTML/JS/CSS — single file, zero dependencies to install.
-
----
-
-## What is GraphRAG?
-
-Traditional RAG (Retrieval Augmented Generation) uses **vector similarity** to find relevant documents. It works for semantic search but fails at:
-- Multi-hop reasoning ("Who manages Alice's colleagues?")
-- Relationship-aware queries ("How is GraphRAG connected to LangChain?")
-- Structured entity lookups ("List all people at NeuroSys")
-
-**GraphRAG** replaces the vector lookup with **knowledge graph traversal**:
-
-```
-User Query
-    ↓
-Entity Extraction  →  Find seed nodes matching query keywords
-    ↓
-Graph Traversal    →  BFS/DFS expand N hops from seeds
-    ↓
-Context Assembly   →  Format subgraph (nodes + relationships) as text
-    ↓
-LLM Generation     →  Claude answers using ONLY the graph context
-    ↓
-Grounded Answer    →  Accurate, relationship-aware, hallucination-reduced
-```
-
----
-
-## Knowledge Graph Schema
-
-### Node Types
-| Type | Color | Count | Description |
-|------|-------|-------|-------------|
-| `person` | 🔵 Cyan | 7 | People with skills and roles |
-| `company` | 🟠 Orange | 3 | Organizations |
-| `tech` | 🟣 Violet | 6 | Technologies and frameworks |
-| `project` | 🟡 Yellow | 3 | Active projects |
-| `concept` | 🟢 Green | 2 | Abstract concepts |
-
-### Relationship Types
-```
-WORKS_AT    WORKS_ON    KNOWS       MANAGES
-EXPERT_IN   USES        INTEGRATES  BUILT_WITH
-BENCHMARKS  PRODUCES    STORES      POWERS
-IMPROVES    COMPETES_WITH
-```
-
----
+**How it works:**
+1. **Extract** — Identify seed entities from the user's query
+2. **Traverse** — Perform multi-hop BFS through the knowledge graph
+3. **Generate** — Send structured graph context to an LLM for answer synthesis
 
 ## Features
 
-### Graph Visualization
-- **Force-directed layout** with D3.js v7 physics simulation
-- **Drag nodes** to reorganize the graph
-- **Zoom & pan** (scroll / pinch to zoom)
-- **Hover tooltips** with entity details and skills
-- **Click a node** to auto-populate a query about it
-
-### GraphRAG Pipeline
-- **Multi-hop traversal**: configurable depth 1–4 hops
-- **Score-based seed detection**: weighted keyword matching against labels, descriptions, and skills
-- **Type filters**: show/hide node types on the graph
-- **Cypher query display**: shows the equivalent Neo4j Cypher query
-- **Node Inspector**: displays retrieved nodes with relationships
-
-### Chat Interface
-- **Step-by-step pipeline visualization** (Extract → Traverse → Generate)
-- **Typewriter animation** for generated answers
-- **Per-message metadata**: seeds, nodes, edges, depth, time
-- **Export chat** to .txt file
-- **Sample queries** to get started
-
-### Particle System
-- **Glowing particles** travel along traversed edges during retrieval
-- **Trailing glow effects** highlight active graph paths
-
----
+| Feature | Description |
+|---|---|
+| **Interactive Force Graph** | D3.js force-directed graph with drag, zoom, pan, and click-to-query |
+| **Multi-Hop Traversal** | Configurable 1-4 hop depth BFS with real-time visual highlighting |
+| **Multi-Model Support** | Switch between Llama 3.3 70B, Mixtral 8x7B, and Gemma2 9B via Groq API |
+| **Live Node Search** | Instant graph filtering as you type — matches labels, types, descriptions, and skills |
+| **Dark/Light Themes** | Toggle between dark and light modes with full CSS variable theming |
+| **Markdown Responses** | AI responses rendered as formatted markdown with syntax highlighting |
+| **Graph Snapshot Export** | Export the current graph state as a high-resolution PNG |
+| **Query History** | Persistent query history with one-click re-run (localStorage) |
+| **Keyboard Shortcuts** | `Ctrl+K` (search), `Ctrl+/` (help), `Ctrl+Enter` (send), `Escape` (close) |
+| **Cypher Query Preview** | Auto-generated Neo4j Cypher equivalent for each graph traversal |
+| **Particle Effects** | Animated particle system along traversed edges during retrieval |
+| **Copy to Clipboard** | One-click copy for AI answers and generated Cypher queries |
+| **Blueprint Grid Canvas** | High-tech grid background behind the force graph |
 
 ## Architecture
 
 ```
-index.html
-├── GRAPH_DATA          ← Embedded knowledge graph (nodes + edges)
-├── TYPE_CFG            ← Visual config per node type  
-├── EDGE_CFG            ← Color per relationship type
-├── retrieveSubgraph()  ← BFS traversal engine
-├── buildCypher()       ← Cypher query generator
-├── askClaude()         ← Anthropic API call
-├── initGraph()         ← D3.js force simulation
-├── spawnParticles()    ← Canvas particle system
-└── handleQuery()       ← Pipeline orchestrator
+User Query
+    │
+    ▼
+┌──────────────┐     ┌───────────────────┐     ┌──────────────┐
+│   EXTRACT    │────▶│     TRAVERSE      │────▶│   GENERATE   │
+│              │     │                   │     │              │
+│ NLP keyword  │     │ Multi-hop BFS on  │     │ Groq API     │
+│ scoring to   │     │ knowledge graph   │     │ (Llama 3.3 / │
+│ find seed    │     │ with configurable │     │  Mixtral /    │
+│ entities     │     │ depth (1-4 hops)  │     │  Gemma2)      │
+└──────────────┘     └───────────────────┘     └──────────────┘
+                              │
+                              ▼
+                     ┌───────────────────┐
+                     │  VISUALIZE        │
+                     │  D3.js highlights │
+                     │  + particles      │
+                     └───────────────────┘
 ```
 
----
+## Tech Stack
 
-## Customisation
+- **Frontend**: Vanilla HTML/CSS/JavaScript (zero build step)
+- **Graph Engine**: D3.js v7 (force simulation, SVG rendering)
+- **LLM Backend**: Groq API (OpenAI-compatible endpoint)
+- **Markdown**: marked.js for response rendering
+- **Export**: html2canvas for PNG snapshots
+- **Fonts**: JetBrains Mono + Space Grotesk (Google Fonts)
+- **Server**: Python (custom HTTP server with .env support)
 
-### Add your own nodes
-Open `index.html` and find `GRAPH_DATA.nodes`. Add entries like:
-```js
-{ 
-  id: "maya",
-  label: "Maya Singh",
-  type: "person",          // person | company | tech | project | concept
-  desc: "Your description here",
-  skills: ["Python","ML"]  // optional, for person nodes
-}
+## Quick Start
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/commitsbyaditya/Graph-RAG.git
+cd Graph-RAG
 ```
 
-### Add relationships
-In `GRAPH_DATA.edges`:
-```js
-{ s: "maya", t: "neurosys", r: "WORKS_AT" }
+### 2. Set up your API key
+
+Create a `.env` file in the project root:
+
+```
+GROQ_API_KEY=gsk_your_key_here
 ```
 
-### Change traversal behaviour
-- **Depth**: Adjust with the sidebar slider (1–4 hops)
-- **Scoring**: Edit `retrieveSubgraph()` — tweak the score weights
-- **System prompt**: Edit the `system` field in `askClaude()`
+Get a free API key at [console.groq.com](https://console.groq.com)
 
----
+### 3. Run the server
 
-## API Key
+```bash
+python server.py
+```
 
-The app uses the **Anthropic Claude API** (`claude-sonnet-4-20250514`).
+Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-- Key is stored in **browser localStorage** only
-- Never transmitted except to `api.anthropic.com`
-- Get your key: https://console.anthropic.com
+## Knowledge Graph Schema
 
----
+```
+Person ──WORKS_AT──▶ Company
+Person ──WORKS_ON──▶ Project
+Person ──KNOWS─────▶ Person
+Person ──MANAGES───▶ Person
+Person ──EXPERT_IN─▶ Tech/Concept
+Person ──USES──────▶ Tech
+Project ─USES──────▶ Tech
+Project ─BENCHMARKS▶ Concept
+Tech ────INTEGRATES▶ Tech
+```
 
-## References
+## Keyboard Shortcuts
 
-- [Neo4j GraphRAG Manifesto](https://neo4j.com/blog/genai/graphrag-manifesto/)
-- [Microsoft GraphRAG Paper](https://arxiv.org/abs/2404.16130)
-- [LangChain Neo4j Integration](https://python.langchain.com/docs/integrations/graphs/neo4j_cypher/)
-- [LlamaIndex KnowledgeGraphIndex](https://docs.llamaindex.ai/en/stable/examples/index_structs/knowledge_graph/)
-- [D3.js Force Simulation](https://d3js.org/d3-force)
+| Shortcut | Action |
+|---|---|
+| `Ctrl + K` | Focus the node search bar |
+| `Ctrl + Enter` | Submit the current query |
+| `Ctrl + /` | Open keyboard shortcuts help |
+| `Enter` | Submit query (when input is focused) |
+| `Escape` | Close modals or clear search |
 
----
+## Customization
 
-## Lab 11 - Learning Objectives
+### Adding Nodes
 
-1. Understand the difference between **vector RAG** and **Graph RAG**
-2. Implement **entity extraction** from natural language queries
-3. Perform **multi-hop graph traversal** (BFS)
-4. **Assemble structured context** for LLM consumption
-5. Ground LLM outputs in **explicit knowledge graph facts**
-6. Visualise the retrieval process interactively
+Add new entities to the `GRAPH_DATA.nodes` array in `index.html`:
 
----
+```javascript
+{ id: "unique_id", label: "Display Name", type: "person", desc: "Description", skills: ["skill1", "skill2"] }
+```
 
-*Built for Lab 11 · Graph RAG · Implemented with D3.js + Claude API*
+### Adding Relationships
+
+Add new edges to the `GRAPH_DATA.edges` array:
+
+```javascript
+{ s: "source_id", t: "target_id", r: "RELATIONSHIP_TYPE" }
+```
+
+### Adding Node Types
+
+Extend `TYPE_CFG` with a new type configuration:
+
+```javascript
+newtype: { fill: "#color", stroke: "#darker", icon: "◈", textFill: "#color" }
+```
+
+## Project Structure
+
+```
+Graph-RAG/
+├── index.html      # Complete frontend (HTML + CSS + JS)
+├── server.py       # Python HTTP server with .env support
+├── .env            # API key configuration (gitignored)
+├── .gitignore      # Git ignore rules
+└── README.md       # This file
+```
+
+## Resume Line
+
+> Built a GraphRAG system featuring interactive D3.js knowledge graph visualization, multi-hop BFS traversal, multi-model LLM integration (Groq), and a real-time query pipeline with markdown rendering — all in a zero-dependency frontend.
+
+## License
+
+MIT
