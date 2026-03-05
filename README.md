@@ -1,11 +1,11 @@
-# ⬡ GraphRAG System — Lab 11
+# GraphRAG System - Lab 11
 
-> **Knowledge Graph × Retrieval Augmented Generation**  
+> **Knowledge Graph * Retrieval Augmented Generation**  
 > A production-quality, self-contained Graph RAG demo powered by Claude.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 1. Open `index.html` in any modern browser (Chrome/Firefox/Edge)
 2. Click **⚙ API KEY** in the top-right header
@@ -17,7 +17,7 @@
 
 ---
 
-## 🧠 What is GraphRAG?
+## What is GraphRAG?
 
 Traditional RAG (Retrieval Augmented Generation) uses **vector similarity** to find relevant documents. It works for semantic search but fails at:
 - Multi-hop reasoning ("Who manages Alice's colleagues?")
@@ -42,7 +42,7 @@ Grounded Answer    →  Accurate, relationship-aware, hallucination-reduced
 
 ---
 
-## 🗺️ Knowledge Graph Schema
+## Knowledge Graph Schema
 
 ### Node Types
 | Type | Color | Count | Description |
@@ -63,7 +63,7 @@ IMPROVES    COMPETES_WITH
 
 ---
 
-## ⚙️ Features
+## Features
 
 ### Graph Visualization
 - **Force-directed layout** with D3.js v7 physics simulation
@@ -92,7 +92,7 @@ IMPROVES    COMPETES_WITH
 
 ---
 
-## 📐 Architecture
+## Architecture
 
 ```
 index.html
@@ -109,7 +109,7 @@ index.html
 
 ---
 
-## 🔧 Customisation
+## Customisation
 
 ### Add your own nodes
 Open `index.html` and find `GRAPH_DATA.nodes`. Add entries like:
@@ -136,7 +136,7 @@ In `GRAPH_DATA.edges`:
 
 ---
 
-## 🔑 API Key
+## API Key
 
 The app uses the **Anthropic Claude API** (`claude-sonnet-4-20250514`).
 
@@ -146,7 +146,7 @@ The app uses the **Anthropic Claude API** (`claude-sonnet-4-20250514`).
 
 ---
 
-## 📚 References
+## References
 
 - [Neo4j GraphRAG Manifesto](https://neo4j.com/blog/genai/graphrag-manifesto/)
 - [Microsoft GraphRAG Paper](https://arxiv.org/abs/2404.16130)
@@ -156,7 +156,7 @@ The app uses the **Anthropic Claude API** (`claude-sonnet-4-20250514`).
 
 ---
 
-## 🏫 Lab 11 — Learning Objectives
+## Lab 11 - Learning Objectives
 
 1. Understand the difference between **vector RAG** and **Graph RAG**
 2. Implement **entity extraction** from natural language queries
