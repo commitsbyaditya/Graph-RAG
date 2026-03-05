@@ -7,6 +7,7 @@
   <title>GraphRAG System · Lab 11</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
@@ -929,6 +930,73 @@
     #api-warning.show {
       display: block;
     }
+
+    /* Markdown Rendering */
+    .msg-body p {
+      margin: 4px 0;
+    }
+
+    .msg-body ul,
+    .msg-body ol {
+      margin: 4px 0 4px 18px;
+    }
+
+    .msg-body li {
+      margin: 2px 0;
+    }
+
+    .msg-body code {
+      background: var(--bg3);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--cyan);
+    }
+
+    .msg-body pre {
+      background: var(--bg0);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 10px;
+      margin: 6px 0;
+      overflow-x: auto;
+    }
+
+    .msg-body pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .msg-body strong {
+      color: var(--cyan);
+    }
+
+    .msg-body em {
+      color: var(--text1);
+    }
+
+    /* Query History Items */
+    .history-item {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 10px;
+      color: var(--text2);
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all .15s;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item:hover {
+      border-color: var(--cyan3);
+      color: var(--cyan);
+      background: #00e5ff08;
+    }
   </style>
 </head>
 
@@ -1023,6 +1091,16 @@
         <div id="inspector">
           <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:1.8">Hover
             over graph nodes<br />to inspect entities.</div>
+        </div>
+      </div>
+
+      <div class="section" style="max-height:180px;overflow:hidden;display:flex;flex-direction:column">
+        <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span class="section-title">📜 QUERY HISTORY</span>
+          <button class="btn" style="padding:2px 6px;font-size:9px" onclick="clearHistory()">CLEAR</button>
+        </div>
+        <div id="query-history" style="padding:6px 14px 10px;overflow-y:auto;flex:1">
+          <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">No queries yet.</div>
         </div>
       </div>
 
@@ -1234,6 +1312,7 @@
       initGraph();
       initParticleCanvas();
       checkApiKey();
+      renderQueryHistory();
       document.getElementById('query-input').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleQuery(); }
       });
@@ -1570,6 +1649,9 @@
           seeds: retrieval.seedIds.size,
         });
 
+        // Save to query history
+        saveQueryToHistory(query, answer);
+
         queryCount++;
         totalNodesRetrieved += retrieval.ctxNodes.length;
         updateHeaderStats();
@@ -1646,6 +1728,8 @@
         if (i >= text.length) {
           clearInterval(interval);
           cursor.classList.add('done'); // hide cursor
+          // Render as formatted markdown
+          textSpan.innerHTML = marked.parse(text);
           if (copyContainer) copyContainer.style.display = 'block';
 
           if (meta) {
@@ -1681,6 +1765,48 @@
     }
 
     function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    // ═══════════════════════════════════════════════════════════
+    //  QUERY HISTORY
+    // ═══════════════════════════════════════════════════════════
+    function getQueryHistory() {
+      try { return JSON.parse(localStorage.getItem('graphrag_history') || '[]'); }
+      catch { return []; }
+    }
+
+    function saveQueryToHistory(query, answer) {
+      const history = getQueryHistory();
+      history.unshift({ query, answer: answer.slice(0, 100), time: new Date().toLocaleTimeString() });
+      if (history.length > 20) history.length = 20; // max 20
+      localStorage.setItem('graphrag_history', JSON.stringify(history));
+      renderQueryHistory();
+    }
+
+    function renderQueryHistory() {
+      const container = document.getElementById('query-history');
+      const history = getQueryHistory();
+      if (!history.length) {
+        container.innerHTML = '<div style="font-size:10px;color:var(--text3);font-family:\'JetBrains Mono\',monospace">No queries yet.</div>';
+        return;
+      }
+      container.innerHTML = history.map((h, i) => `
+        <div class="history-item" onclick="rerunQuery('${escHtml(h.query).replace(/'/g, "\\'")}')"
+             title="${escHtml(h.query)}">
+          <span style="color:var(--text3)">${h.time}</span> · ${escHtml(h.query)}
+        </div>
+      `).join('');
+    }
+
+    function rerunQuery(query) {
+      document.getElementById('query-input').value = query;
+      handleQuery();
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('graphrag_history');
+      renderQueryHistory();
+      showToast('✓ History cleared');
+    }
 
     function setLoading(v) {
       document.getElementById('send-btn').disabled = v;
